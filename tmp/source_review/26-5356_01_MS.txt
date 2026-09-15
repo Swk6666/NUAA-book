@@ -1,0 +1,679 @@
+                                    CONFIDENTIAL. Limited circulation. For review only
+                                           IEEE RA-L submission 26-5356.1
+
+
+
+  DDP-Guided Residual Reinforcement Learning for Torque-Controlled
+         Robot Trajectory Tracking under Model Mismatch
+                                                      Anonymous Authors
+
+
+   Abstract— Trajectory optimization provides efficient and in-     ing model fidelity raises the burden of system identification
+terpretable robot motions, but model mismatch and multirate         and optimization without necessarily eliminating residual
+deployment can prevent accurate reproduction on hardware.           mismatch.
+Increasing model fidelity is costly, whereas end-to-end torque
+learning discards useful task and feedback structure. This             Learning-based methods offer several ways to mitigate
+paper presents a differential dynamic programming (DDP)-            model mismatch. Direct torque reinforcement learning (Di-
+guided residual reinforcement learning framework that re-           rect RL) maps observations to joint-torque commands [6]
+tains the nominal DDP controller and learns only bounded            and can learn unmodeled effects, but it must also rediscover
+residual torques. The stored DDP solution structures the            task structure and stabilizing behavior. Model-based learning
+policy inputs and learning objectives, while a dual-endpoint
+interface converts low-rate policy outputs into piecewise-linear    retains stronger priors: guided policy search trains policies
+torque commands for the high-rate loop. The method therefore        from locally optimized trajectories [7], while Lee et al.
+compensates for mismatch between planning and execution             learn local dynamics corrections with Gaussian processes [8].
+without relearning the task from scratch. Simulation demon-         Residual policy learning instead adds a learned correction
+strated faster learning and more accurate tracking than direct      to an existing controller. Representative implementations
+torque reinforcement learning. On a Franka Emika Panda,
+the proposed method achieved the lowest mean errors in              augment hand-designed or model-predictive controllers [9],
+end-effector position and orientation and the lowest root-          a Cartesian position controller [10], and a data-informed
+mean-square (RMS) joint-position error across training and          incremental tracking policy [11]. For policies trained in
+held-out trajectories, substantially outperforming both nominal     simulation, dynamics randomization can further support sim-
+and friction-compensated DDP. The dual-endpoint design also         to-real transfer [12]. Joint-torque residual learning, espe-
+produced smoother torque-command evolution than zero-order
+hold. The hardware tests further demonstrated that this track-      cially as a correction to optimizer-generated torques, remains
+ing advantage persisted under unmodeled payloads, including         comparatively underexplored. In this setting, conventional
+one beyond the training distribution. These results indicate that   tracking rewards omit the optimizer’s local value information
+structured residual learning can provide a practical bridge from    and consequently weight tracking errors without reference
+optimized motion to hardware execution without replacing the        to their effect on the nominal objective. Deployment also
+nominal controller.
+                                                                    poses a multirate challenge: a low-rate policy must drive a
+                                                                    high-rate torque loop without the step changes introduced
+                      I. I NTRODUCTION
+                                                                    by a zero-order hold [13]. These gaps motivate combining
+   Model-based optimal control generates dynamically feasi-         residual learning with a nominal optimizer that provides both
+ble robot motion by optimizing state and control trajectories       an executable controller and structured learning signals.
+subject to dynamics and physical constraints. The resulting            Differential dynamic programming (DDP) is selected for
+sequences define a reference trajectory and feedforward             this role because its second-order shooting method efficiently
+command for a feedback controller that must reproduce the           computes a nominal trajectory together with time-varying
+planned motion on hardware. At the joint torque level, op-          feedback gains and local value information [14]. The pro-
+timization can exploit coupled robot dynamics and actuator          posed framework retains the resulting DDP controller and
+limits to shape motion and interaction behavior [1], [2].           learns only bounded residual torques. The stored trajectory
+Such optimal control problems are commonly solved using             and local value information structure the policy inputs and
+direct transcription methods, including collocation [3], [4],       model-derived training signals. A dual-endpoint interface
+or shooting-based methods.                                          connects the low-rate policy outputs to the high-rate torque
+   Torque-level optimization, however, depends strongly on          loop. Robustness to deployment mismatch is promoted by
+model fidelity. Position- and velocity-controlled interfaces        randomizing plant, payload, sensing, and timing conditions
+typically use low-level motion servos to attenuate plant            during training.
+uncertainty. Direct joint torque control has no equivalent low-        The main contributions are threefold:
+level motion servo, so modeling errors in inertia, bias forces,     1) A DDP-guided residual learning formulation retains the
+joint friction, payload properties, and actuator dynamics           nominal controller’s feedforward and feedback structure
+directly affect the commanded torque and closed-loop mo-            while allowing the planner to omit difficult-to-model effects
+tion. Uncertainty in robot and payload parameters therefore         such as joint friction. The stored DDP solution structures
+remains a longstanding control challenge [5]. Consequently,         the policy inputs and auxiliary supervision, while local value
+discrepancies generally remain between the tractable nominal        information shapes the tracking reward.
+model used for optimization and the physical plant. Increas-        2) A dual-endpoint residual interface connects a low-rate
+
+
+              Preprint submitted to IEEE Robotics and Automation Letters as Submission for RA-L only
+                                  Received August 31, 2026 22:32:28 Pacific Time
+                                      CONFIDENTIAL. Limited circulation. For review only
+                                             IEEE RA-L submission 26-5356.1
+
+neural policy to the high-rate torque loop through endpoint           Here, J is the objective; ℓk and ℓN are the stage and terminal
+filtering and interpolation. An action-consistency loss aligns        costs; and X = {x0 , . . . , xN } and U = {u0 , . . . , uN −1 }
+predictions across adjacent policy intervals.                         denote the state and control sequences, with xk ∈ Rnx
+3) A staged evaluation compares the method with Direct RL,            and uk ∈ Rnu . The discrete transition fϑ̂ is obtained
+nominal DDP, DDP with model-based friction compensation,              by integrating the nominal dynamics in (1) with identified
+joint velocity control, and a residual baseline using zero-           or approximate parameters ϑ̂. The vector-valued function
+order hold. The hardware evaluation also examines held-out            ck compactly represents the physical and task constraints
+trajectories and unmodeled payloads.                                  imposed by the planner, including joint limits, torque limits,
+    These evaluations demonstrate improved tracking accu-             and collision-avoidance requirements. The learned residual
+racy and smoother torque-command evolution. Sections II–V             policy is introduced only after the nominal OCP has been
+present the problem, method, experiments, and conclusion,             solved. The OCP solution defines the reference trajectory,
+respectively.                                                         while the DDP backward pass supplies the feedback gains
+                                                                      and value-function derivatives described next.
+    II. P RELIMINARIES AND P ROBLEM F ORMULATION
+A. Robot Dynamics and Model Mismatch                                  C. DDP Solution and Stored Local Quantities
+   Let q ∈ Rnq denote the generalized coordinates, v =                   DDP solves (3) through alternating backward passes based
+q̇ ∈ Rnq the generalized velocities, and x = [q⊤ , v⊤ ]⊤ ∈            on local quadratic models and forward rollouts with line
+Rnx the state. The model-based trajectory optimizer uses a            search. Detailed derivations of the DDP backward pass and
+nominal model of rigid-body dynamics                                  forward rollout can be found in [15]. Let Vk (x) denote the
+                                                                      local cost-to-go at knot k. With tracking error defined as
+             M̂(q)v̇ + ĥ(q, v) = S⊤ u + Ĵc (q)⊤ λ̂,           (1)
+                                                                      reference minus state, the converged solution provides the
+where hats denote nominal-model quantities, M̂ is the                 reference state and command, the feedback gain K⋆k , and
+inertia matrix, ĥ collects bias forces, u is the planned             the first- and second-order value derivatives
+actuator command, and S⊤ maps actuator commands to
+                                                                                xref  ⋆
+                                                                                 k = xk ,       uref  ⋆
+                                                                                                 k = uk ,    Kref  ⋆
+                                                                                                              k = Kk ,
+generalized forces. The product Ĵ⊤    c λ̂ represents optional
+constraint forces, including modeled contact forces. Joint
+                                                                                        ⋆
+                                                                                  pk = Vx,k ,          ⋆
+                                                                                                 Pk = Vxx,k .                     (4)
+friction is omitted from the nominal planner because its              Here, ⋆ identifies quantities at the converged DDP solution;
+nonlinear behavior is difficult to model accurately over the          pk and Pk are the local value gradient and Hessian used
+robot’s operating range. Accordingly, the execution dynamics          later for reward weighting.
+include friction and other effects that are simplified or absent
+in (1):                                                               D. Planned Torque Tracking with Residual Control
+     M(q)v̇ + h(q, v) + τf (v) + Dv + τunm (Ht , t)                      The nominal DDP controller combines feedforward torque
+                                                                      and local feedback. Time-indexed xref (t), uref (t), and K(t)
+                             = S⊤ τcmd + Jc (q)⊤ λ,             (2)
+                                                                      denote interpolated values of the stored knot sequences in
+where τcmd is the joint-torque command applied during                 (4). At an arbitrary state x, the controller is
+execution, and unhatted quantities describe the physical
+                                                                                                                                (5)
+                                                                                                             (︁           )︁
+execution dynamics, including changes in inertia and bias                      τDDP (t; x) = uref (t) + K(t) xref (t) − x .
+terms caused by the payload. The terms τf and Dv repre-               During execution, τDDP (t) denotes the tracking torque
+sent friction and viscous damping, Ht denotes recent state            τDDP (t; x(t)); the planned feedforward torque uref (t) is
+and command history, and τunm collects history-dependent              independent of the execution state.
+execution effects such as timing delays and errors in actuator           The physical system, including its low-level torque loop,
+torque tracking. This mismatch between the planner’s nomi-            does not exactly obey the nominal transition model fϑ̂ . Let
+nal dynamics and the physical torque balance degrades hard-           T and Ṫ denote the admissible sets for torque and its rate,
+ware tracking, motivating learned residual compensation.              respectively, and ΠT ,Ṫ the corresponding projection. The
+B. Nominal Optimal Control                                            applied command is the projection of the summed nominal
+                                                                      DDP and residual torques:
+   Given a horizon of N control intervals and N + 1 state
+knots, the nominal trajectory is generated by solving the                         τcmd (t) = ΠT ,Ṫ (τDDP (t) + τRL (t)) ,        (6)
+following constrained discrete-time optimal control problem                     −τres,max ⪯ τRL (t) ⪯ τres,max .                  (7)
+(OCP):
+                                        N −1                          The objective is to learn τRL so that the physical system
+                                                                      tracks the DDP reference more accurately while retaining
+                                        ∑︂
+     min       J(X , U) = ℓN (xN ) +           ℓk (xk , uk )   (3a)
+      X ,U
+                                        k=0                           the nominal DDP controller as the base controller.
+               s.t.   x0 = xinit ,                             (3b)      The additive command structure naturally supports imple-
+                                                                      mentation at separate update rates. The DDP controller with
+                   xk+1 = fϑ̂ (xk , uk ),                      (3c)
+                                                                      feedforward and feedback runs in the high-rate torque loop,
+             ck (xk , uk ) ⪯ 0.                                (3d)   whereas the neural residual policy is evaluated at a lower rate
+
+
+                Preprint submitted to IEEE Robotics and Automation Letters as Submission for RA-L only
+                                    Received August 31, 2026 22:32:28 Pacific Time
+                                    CONFIDENTIAL. Limited circulation. For review only
+                                           IEEE RA-L submission 26-5356.1
+
+and supplies bounded compensation. This design removes              Here ∆tlow is the low-level control period and ∆tπ =
+the requirement that neural network inference, observation          Nsub ∆tlow is the policy period. This construction replaces a
+preprocessing, and operating-system scheduling satisfy the          residual command applied through a zero-order hold (ZOH)
+timing constraints of the high-rate torque loop.                    with a piecewise-linear command while leaving neural net-
+                                                                    work inference outside the high-rate torque loop.
+                        III. M ETHOD
+                                                                    C. Observation Design
+   Building on the decomposition of commanded torque
+                                                                      The policy observation is partitioned into blocks for the
+into nominal and residual components in (6), the proposed
+                                                                    current state, history, and reference preview:
+method retains the DDP controller in the high-rate torque
+loop and learns bounded residual torques to compensate                                       ⊤          ⊤          ⊤ ⊤
+                                                                              oj = (ocur                                   (12)
+                                                                                     [︁                             ]︁
+                                                                                         j ) , vec(Hj ) , vec(Fj )     ,
+for mismatch between planning and execution. A multirate
+                                                                    where vec(·) stacks rows, and Hj and Fj are the history
+interface interpolates the two endpoints predicted by each
+                                                                    and reference-preview matrices defined below. This partition
+low-rate policy update, while the observations and learning
+                                                                    separates instantaneous feedback, past tracking mismatch and
+objectives draw on the nominal trajectory and stored DDP
+                                                                    timing information, and a preview of the nominal plan.
+information. Reinforcement learning is combined with super-
+                                                                       At policy update j, let xobs denote the latest state estimate
+vision from inverse dynamics and a consistency constraint                                       j
+                                                                    supplied to the policy; it may be noisy, delayed, or reused
+across adjacent intervals to improve tracking without replac-
+                                                                    when no new estimate is available. Define the tracking error,
+ing the nominal controller.
+                                                                    normalized DDP tracking torque, and normalized feedfor-
+A. Dual-Endpoint Action Parameterization                            ward torque as
+  Let j index policy updates and let tj denote the corre-                                     ej = xref (tj ) − xobs
+                                                                                                                 j ,
+sponding physical time. At each update, the policy produces                             τ̃DDP,j = D−1
+                                                                                                   τ τDDP (tj ),                     (13)
+a raw dual-endpoint action in normalized coordinates, ãj ,                               ũref,j = D−1
+                                                                                                     τ uref (tj ),
+whose two subvectors correspond to the start and end of the
+policy interval. It is projected onto A = [−1, 1]2nu before         where τmax collects the joint torque limits, with Dτ =
+execution:                                                          diag(τmax ).
+                                             ]︁⊤                      The current block is
+           aj = ΠA (ãj ) = (a0j )⊤ , (a1j )⊤ ∈ A,      (8)
+                             [︁                                                      [︂                            ]︂⊤
+                                                                                                      ⊤
+                                                                              ocur
+                                                                                j  = e⊤       obs ⊤            ⊤
+                                                                                        j , (xj ) , τ̃DDP,j , aj−1     , (14)
+where a0j , a1j ∈ [−1, 1]nu parameterize the residual torques
+                                                                    where aj−1 is the previous dual-endpoint action.
+at the interval start and end, respectively. Let Dres =
+                                                                       For the rows in the history and preview blocks, let xobs
+diag(τres,max ) ∈ Rnu ×nu denote the diagonal matrix of                                                                        j,i
+                                                                    denote the stored state estimate and define thj,i = tj − i∆tπ
+residual torque scales. The residual endpoints are
+                                                                    and tfj,i = tj +i∆tπ . The corresponding error and normalized
+              τiRL,j = Dres aij ,     i ∈ {0, 1}.            (9)    torque terms are
+
+The bounded residual augments rather than replaces the nom-             ehj,i = xref (thj,i ) − xobs
+                                                                                                 j,i ,   τ̃hj,i = D−1       h
+                                                                                                                   τ τDDP (tj,i ),
+inal DDP controller, thereby preserving its feedforward and             efj,i = xref (tfj,i ) − xobs
+                                                                                                 j ,     ũfj,i = D−1       f
+                                                                                                                   τ uref (tj,i ).   (15)
+feedback structure and confining learning to compensation
+                                                                       For each stored history sample, let          ∆tobs     ≥ 0 denote
+for planning-to-execution mismatch.                                                                                   j,i
+                                                                    the age of the state estimate in seconds and ιstale     j,i   ∈ {0, 1}
+B. Cascaded Endpoint Filtering and Interpolation                    indicate whether the preceding available state estimate was
+                                                                    reused. Let nmiss  count consecutive missed policy updates
+   Before interpolation, the predicted endpoints are filtered                      j,i
+                                                                    and define n̄miss   = nmiss j,i /(Nmiss + 1), where Nmiss is
+                                                                                                          max                      max
+sequentially. Let τ̄1RL,j−1 denote the residual torque accepted                   j,i
+                                                                    the maximum permitted number of consecutive misses. The
+at the end of the preceding policy interval and let αf ∈ (0, 1]
+                                                                    history block is formed from rows
+denote the filter coefficient. The accepted endpoints are                              [︁ h ⊤ obs ⊤ ⊤
+                                                                               ohist
+                                                                                j,i = (ej,i ) , (xj,i ) , aj−i ,
+           τ̄0RL,j = (1 − αf )τ̄1RL,j−1 + αf τ0RL,j ,                                                                  miss ⊤         (16)
+                                                                                         (τ̃hj,i )⊤ , ∆tobs    stale
+                                                                                                                           ]︁
+                                                                                                        j,i , ιj,i , n̄j,i      ,
+           τ̄1RL,j = (1 − αf )τ̄0RL,j + αf τ1RL,j .         (10)
+                                                                    where Nh is the history length, i indexes the rows, and aj−i
+Thus, the filtered interval-start torque becomes the filter state   was issued i updates earlier. The history matrix is Hj =
+                                                                            ⊤            hist ⊤
+for the interval-end torque, forming a cascade that preserves       [(ohist
+                                                                       j,1 ) ; . . . ; (oj,Nh ) ].
+their temporal order.                                                  The preview block is formed from rows
+   With Nsub low-level substeps per policy interval, the                                 ofut
+                                                                                                [︁ f ⊤       f ⊤ ⊤
+                                                                                                                   ]︁
+                                                                                                                            (17)
+                                                                                          j,i = (ej,i ) , (ũj,i )    ,
+accepted endpoints define the residual command
+                                                                    where Nf is the lookahead length. The preview matrix is
+  τRL (tj + m∆tlow ) = (1 − βm )τ̄0RL,j + βm τ̄1RL,j ,              Fj = [(ofutj,1 ) ; . . . ; (oj,Nf ) ]. This matrix previews the
+                                                                                    ⊤            fut ⊤
+                         m                                          reference motion and feedforward torque over the next Nf
+                βm =        , m = 0, . . . , Nsub − 1.      (11)
+                       Nsub                                         policy samples.
+
+
+              Preprint submitted to IEEE Robotics and Automation Letters as Submission for RA-L only
+                                  Received August 31, 2026 22:32:28 Pacific Time
+                                    CONFIDENTIAL. Limited circulation. For review only
+                                           IEEE RA-L submission 26-5356.1
+
+D. Policy Network Architecture                                      Here Cj is the position–velocity coupling term in the
+   The network follows the partition in (12): a two-layer mul-      weighted state-error metric, [z]+ = max(z, 0), and nq is
+tilayer perceptron (MLP) processes the current block, while         the number of joints. Since Wj is symmetric, Eq,j + Ev,j =
+separate long short-term memory (LSTM) encoders preserve             j Wj ej . During training, rq,j and rv,j are averaged over
+                                                                    e⊤
+the ordering within the history and preview windows:                the low-level samples within the policy interval.
+                                                                       The matrix Wj is computed from local DDP value infor-
+                       zcur
+                        j   = ϕcur (ocur
+                                     j ),                           mation. Let P+ (·) symmetrize a matrix, project it onto the
+                      zhist
+                       j    = ϕhist (Hj ),                   (18)   positive semidefinite cone, normalize positive eigenvalues to
+                       zfut                                         unit mean, and clip them to [wmin , wmax ]. Let D(·) normalize
+                        j = ϕfut (Fj ).
+                                                                    absolute values to unit mean and then apply the same
+The three embeddings are concatenated and mapped by                 clipping. When both stored value derivatives are available,
+separate fusion MLPs for the actor and critic:                      the matrix derived from the value function is
+                         ⊤   hist ⊤   fut ⊤ ⊤
+             zj = (zcur
+                 [︁                         ]︁
+                     j ) , (zj ) , (zj )       ,                             Gj = (1 − ηg )P+ (Pj ) + ηg diag(D(pj )) ,            (23)
+              π
+            hj = gπ (zj ),                       (19)
+            hVj = gV (zj ).                                         where Pj and pj are the time-aligned Hessian and gradient
+                                                                    from (4), and ηg ∈ [0, 1] controls their relative weighting. If
+For actor parameters θ, two endpoint-specific, one-hidden-          only one derivative is available, Gj uses that derivative; if
+layer heads map hπj to the action means µ0θ (oj ) and µ1θ (oj ),    neither is available, it uses diagonal weights obtained from
+which together form µθ (oj ), the mean of a Gaussian raw            the column norms of K(tj ). The final metric for the state
+action with learned diagonal covariance. Sampled actions,           error is
+or the mean during deterministic evaluation, are projected
+by (8). For critic parameters ψ, a head maps hVj to Vψ (oj ).                          Wj = (1 − ηv )I + ηv Gj ,                   (24)
+
+E. Reward Shaping with DDP Value Information                        where ηv ∈ [0, 1] controls the strength of value weighting.
+   The reward at policy update j is the sum of tracking and           The effort and smoothness terms penalize the residual
+residual regularization terms:                                      action at the start of the interval and its temporal variation:
+
+               rj = rjtrack + rjeffort + rjsmooth .          (20)         δaj = a0j − a0j−1 ,         δ 2 aj = a0j − 2a0j−1 + a0j−2 ,
+Here rjtrack is the tracking reward, while rjeffort and rjsmooth        rjeffort = −ca (a0j )⊤ Wτ,j a0j ,                          (25)
+penalize residual effort and temporal variation, respectively.        rjsmooth = −cd (j)(δaj )⊤ Wτ,j δaj
+  Let T (ϵ; Σ) be the average of exp[−(ϵ/σ)2 ] over σ ∈ Σ.
+                                                                                 − cdd (j)(δ 2 aj )⊤ Wτ,j δ 2 aj .                 (26)
+The tracking reward is
+   rjtrack = wq rq,j + wv rv,j + wp ree,p,j + wR ree,R,j ,          Here δaj and δ 2 aj are the first- and second-order finite
+                                                                    differences of the action at the interval start, and ca , cd (j),
+     rα,j = T (ϵα,j ; Σα ),     α ∈ {q, v},
+                                                                    and cdd (j) set the effort, first-order smoothness, and second-
+  ree,p,j = T (∥ep,j ∥; Σp ),      ree,R,j = T (∥eR,j ∥; ΣR ).      order smoothness penalties. The smoothness coefficients
+                                                            (21)    increase near the nominal trajectory, favoring small residual
+Here rq,j and rv,j are the rewards for joint position and           corrections when tracking errors are already low.
+velocity, and ep,j and eR,j are the end-effector position and          The diagonal matrix Wτ,j weights these penalties by the
+orientation errors. The sets Σq , Σv , Σp , and ΣR contain the      local sensitivity of joint acceleration to joint torque. It is
+corresponding tolerances; wq , wv , wp , and wR weight the          defined as
+four tracking terms.
+   The task-space effect of a joint tracking error depends                Wτ,j = diag(wτ,j ),
+on both the affected joint and the robot configuration. The                wτ,j = 1 + ητ (ŵτ,j − 1),                              (27)
+joint rewards therefore use root-mean-square (RMS) errors                  ŵτ,j = C[wmin ,wmax ] diag(Mξ (q(tj ))−1 ) .
+                                                                                                 (︁                   )︁
+weighted by local DDP value information, emphasizing state
+errors according to their effect on the nominal cost-to-go          Here C[wmin ,wmax ] (·) normalizes positive entries to unit mean
+rather than treating all joints and state directions uniformly.     and clips them to [wmin , wmax ], 1 is the vector of ones,
+Writing ej = [e⊤          ⊤ ⊤
+                   q,j , ev,j ] and partitioning Wj into q–v        ŵτ,j is the resulting normalized sensitivity, and ητ ∈ [0, 1]
+blocks, define                                                      controls the strength of sensitivity weighting. Here ξ denotes
+                                                                    the dynamics parameters sampled for the current training
+         Cj = e⊤
+               q,j Wqv,j ev,j ,                                     episode, and Mξ is the corresponding simulated inertia
+       Eα,j = e⊤
+               α,j Wαα,j eα,j + Cj ,          α ∈ {q, v},           matrix. This weight is computed only for the training reward
+                                                                    and therefore requires no inertia-matrix estimation during
+              √︂
+       ϵα,j = [Eα,j ]+ /nq .                                 (22)
+                                                                    hardware execution.
+
+
+              Preprint submitted to IEEE Robotics and Automation Letters as Submission for RA-L only
+                                  Received August 31, 2026 22:32:28 Pacific Time
+                                     CONFIDENTIAL. Limited circulation. For review only
+                                            IEEE RA-L submission 26-5356.1
+
+F. Auxiliary Target from Inverse Dynamics                            H. Domain Randomization for Sim-to-Real Transfer
+   At time s and state xs = [q⊤                                         At each episode start, the plant dynamics, payload, initial-
+                                  s , vs ] , the inverse-dynamics
+                                       ⊤ ⊤
+
+(ID) auxiliary residual target is                                    state perturbation, and residual torque gain are sampled as
+                                                                     specified in Table I; the plant, payload, and gain parameters
+                                                                     then remain fixed. Payload properties are parameterized by
+                       (︁                        )︁
+ τres,ID (s; xs ) = τID qs , vs , ΠQ̈ (q̈ref (s)) − τDDP (s; xs ),
+                                                              (28)   mass, center of mass (COM), and an equivalent radius used
+where τID uses the randomized simulation model active in             to compute inertia. The DDP plan and nominal controller
+the episode, and Q̈ is the acceleration set used for target          are not recomputed, so the residual policy must compensate
+construction. The torque target is projected onto the residual-      for the sampled mismatch. Measurement noise, stale state
+torque box Tres defined by (7) and then normalized to action         estimates, and missed policy updates are sampled online; a
+coordinates:                                                         missed update holds the last accepted residual endpoint for
+                                                                     one policy interval.
+           aID (s; xs ) = D−1
+                           res ΠTres (τres,ID (s; xs )) .    (29)
+                                                                               IV. S IMULATIONS AND E XPERIMENTS
+During training, this target supervises only the interval-             The evaluation progresses from simulation comparisons
+start action, a0ID (j) = aID (tj ; x(tj )); the endpoint action      to hardware validation. The data used in this paper are
+corresponds to an unobserved future state and is therefore           available at https://anonymous.4open.science/
+not assigned an inverse-dynamics target.                             r/DDP-guided-residual-RL-D50B.
+                                                                     A. Simulation Setup
+G. Training Losses
+                                                                        The simulation used a MuJoCo [17] Panda model and
+  The policy is optimized with proximal policy optimization          21 DDP plans for joint-space and Cartesian tasks, including
+(PPO) [16]. Let µθ (oj ) = [(µ0j )⊤ , (µ1j )⊤ ]⊤ denote the actor    reaching, orientation changes, and motions across a large
+mean. Auxiliary supervision is applied to this mean, not to          workspace. Policies were trained with vectorized PPO; all
+sampled actions. For a PPO minibatch B, the ID loss for the          simulation evaluations used this complete trajectory set.
+action at the interval start is                                         The controller baselines were Nominal DDP and Direct
+              ∑︁     ∑︁nu ID (︁ 0           0
+                                                   )︁2               RL. Direct RL issued a seven-dimensional joint-torque com-
+                 j∈B    r=1 χj,r µj,r − aID,r (j)                    mand at 100 Hz and held it constant between updates. It used
+      LID =             ∑︁      ∑︁nu ID                ,     (30)
+                           j∈B    r=1 χj,r                           the same trajectories, recurrent encoder, domain randomiza-
+                                                                     tion, and reward as the proposed method but omitted DDP
+where r indexes actuated joints and χID  j,r ∈ {0, 1} indicates      features; inverse-dynamics supervision was used only during
+target validity. Thus, supervision from inverse dynamics acts        training.
+only on µ0j , the mean of the normalized residual action at             Training used 16 parallel environments. Residual policies
+the interval start.                                                  were trained for 107 environment transitions, whereas Direct
+   To enforce temporal consistency across adjacent intervals,        RL was continued to 108 for the extended-budget compar-
+the action predicted for the end of interval j is matched to         ison. Each PPO rollout contained 1024 policy transitions
+the interval-start action predicted from the next observation.       per environment, with a 2048-sample minibatch, 10 epochs
+Let χAC
+      j   ∈ {0, 1} indicate that the transition remains in the       per update, γ = 0.99, and an initial learning rate of 10−4 .
+same episode and has a valid successor observation. The              The low-level and policy periods were 1 and 10 ms; the
+action-consistency (AC) loss is                                      history and preview windows each contained 10 policy sam-
+                            ⃦        (︁         )︁⃦2                 ples. Table I specifies independently sampled randomization
+                        AC ⃦ 1
+                             µj − sg µ0θ (oj+1 ) ⃦2
+                ∑︁
+                  j∈B χj                                             channels. The simulation metrics are mean step reward, RMS
+      LAC =                                          ,     (31)
+                           nu j∈B χAC                                joint-position error, RMS joint-velocity error, RMS end-
+                              ∑︁
+                                       j
+                                                                     effector (EE) position error, RMS EE orientation error, RMS
+where sg(·) denotes stop-gradient. Thus, the prediction at the       residual-torque magnitude, and RMS residual-torque rate.
+start of interval j + 1 is treated as a fixed target during each
+                                                                     B. Simulation Baseline Comparison and Ablation
+update.
+   The total loss is                                                    1) Residual RL versus Direct Torque RL: Table II com-
+                                                                     pares the methods under matched evaluation conditions.
+     L = LPPO + λID (kenv )LID + λAC (kenv )LAC ,            (32)    Nominal DDP used zero residual, and Direct RL used the
+                                                                     best checkpoint from its completed 100-million-transition
+where kenv is the cumulative number of environment tran-             run. With one-tenth of that training budget, the proposed
+sitions. For z ∈ {ID, AC}, λz decays linearly from its               method achieved the lowest values in all three reported
+initial value to zero over the annealing horizon Kz and              tracking-error metrics; its joint-position RMS error was
+remains zero thereafter. The auxiliary losses affect only            74.5% below Direct RL and 90.1% below Nominal DDP.
+policy optimization; they do not alter the environment reward        Fig. 1 further shows that the mean return of the proposed
+or deployed control law.                                             method after 10 million transitions was 169.6% above that
+
+
+               Preprint submitted to IEEE Robotics and Automation Letters as Submission for RA-L only
+                                   Received August 31, 2026 22:32:28 Pacific Time
+                                                                           CONFIDENTIAL. Limited circulation. For review only
+                                                                                  IEEE RA-L submission 26-5356.1
+                                                            TABLE I                                                                               3500
+
+             T RAINING - TIME RANDOMIZATION DISTRIBUTIONS .
+
+
+
+
+                                                                                                                         Mean evaluation return
+        U[a, b] and N (µ, σ 2 ) denote uniform and Gaussian distributions.                                                                        3000
+
+ Quantity                                                   Training distribution
+ Dynamics randomization                                     enabled with probability 0.8 per episode
+                                                                                                                                                  2500
+ Body mass and principal-inertia                            U[0.9, 1.1] per body and inertia component
+ scales
+                                                                                                                                                                                                        MLP baseline
+ Joint damping                                              U[0, 0.05] N m s/rad per joint                                                                                                              MLP + W.
+ Magnitude of joint dry friction                            U[0, 1.0] N m per joint                                                               2000
+                                                                                                                                                                                                        Rec. + W.
+                                                                                                                                                                                                        Rec. + W. + ID
+ Payload randomization                                      enabled independently with probability 0.2                                                                                                  Proposed
+                                                            per episode
+ Payload mass                                               U[0, 0.8] kg                                                                                 0         2            4         6             8                10
+
+ Payload center of mass                                     x, y ∼ U[−0.03, 0.03] m;                                                                                   Training transitions (million)
+                                                            z ∼ U[0, 0.12] m
+ Equivalent payload radius                                  U[0.02, 0.06] m                                   Fig. 2. Staged simulation ablation; the vertical axis starts at 1800 to resolve
+ Initial-state perturbation (q, v)                          N (0, (0.001)2 ) rad,
+                                                                                                              late-training differences.
+                                                            N (0, (0.005)2 ) rad/s
+ Policy-observation noise (q, v)                            N (0, (10−4 )2 ) rad,
+                                                            N (0, (5×10−3 )2 ) rad/s                          at 1 kHz, while the residual policy was evaluated at 100 Hz
+ Feedback-state noise (q, v)                                N (0, (2×10−5 )2 ) rad,
+                                                            N (0, (10−3 )2 ) rad/s                            (Nsub = 10) with a filter coefficient of αf = 0.1. The
+ State-estimate update                                      250 Hz; age jitter U[0, 4] ms; stale              limits on residual and total torque were (5, 5, 5, 5, 2, 2, 2)
+                                                            probability 0.03 per policy update
+ Missed policy update                                       probability 0.04 per policy update;               and (87, 87, 87, 87, 12, 12, 12) N m, respectively; torque in-
+                                                            maximum hold of one policy interval               crements were limited to 1 N m per 1-ms control step.
+                                                            (10 ms)
+ Residual torque gain                                       U[0.95, 1.05] per joint and episode
+
+of Direct RL, while its best return exceeded the maximum
+attained by Direct RL over 100 million transitions by 31.7%.
+
+                                                               Direct RL           Proposed
+
+
+
+
+                                                                                              +31.7%
+                                     3000                                                     at 100M
+            Mean evaluation return
+
+
+
+
+                                                                                +169.6%
+                                                                                                                                                             (a)                              (b)                             (c)
+                                                                                at 10M
+                                     2000
+                                                                                                              Fig. 3. Hardware setup: (a) unloaded robot; (b) robot with an attached
+                                                                                                              payload; (c) configurable payload whose mass is adjusted by adding or
+                                                                                                              removing cylindrical weights.
+                                     1000
+
+                                                                                                                 The hardware evaluation compared the proposed method
+                                                                                                              with Nominal DDP, Friction DDP, and the built-in joint
+                                        0
+                                            0.6   1                        10                           100   velocity controller. The three DDP-based methods used joint
+                                                  Training transitions (million, log scale)                   torque control, whereas the velocity controller served as a
+Fig. 1. Learning curves for the proposed method (10 million transitions)                                      built-in servo baseline. Friction DDP follows a conventional
+and Direct RL (100 million transitions).                                                                      model-based strategy [18]: it retains the nominal DDP state
+                                                                                                              trajectory and feedback gains while adding feedforward fric-
+   2) Staged Component Ablation: Table III summarizes the                                                     tion compensation to the planned torque. The compensation
+cumulative ablation under matched plans, training budgets,                                                    is computed from an identified joint-friction model along the
+rewards, and evaluation conditions. Fig. 2 shows that the pro-                                                stored trajectory.
+posed method improved more rapidly during early training                                                         The evaluation covered the training set and five held-out
+than the MLP baseline and attained a maximum evaluation                                                       trajectories excluded from training and model selection: a
+return comparable to the recurrent baseline with reward                                                       joint chirp, a horizontal Lissajous motion, an orientation task
+weighting and ID supervision. Table IV shows only modest                                                      with a small translation, a diagonal reach toward a high
+differences between the proposed method and the recurrent                                                     frontal target, and a small tilted circle. Together, these tasks
+configuration with reward weighting and ID supervision:                                                       introduce frequencies, cross-axis coupling, reach directions,
+the proposed method reduced all four tracking-error metrics                                                   and tilted motion patterns not represented in the training set.
+and the residual-torque RMS, whereas the baseline achieved                                                       In addition to the simulation tracking metrics, the hard-
+slightly higher reward and lower residual-torque-rate RMS.                                                    ware evaluation reports the maximum end-effector posi-
+The advantage of the complete design was more evident in                                                      tion error. Let τJ denote the measured joint torque; the
+the hardware endpoint ablation.                                                                               commanded joint torque is τcmd , as defined in Section II-
+                                                                                                              A. Measured-torque metrics comprise torque RMS and the
+C. Hardware Setup                                                                                             RMS, 95th percentile, 99th percentile, and peak of the abso-
+  Fig. 3 shows the hardware setup used for policy deploy-                                                     lute torque rate. The endpoint ablation also reports the RMS
+ment without online adaptation. The torque-control loop ran                                                   rate of commanded torque and the RMS second derivative
+
+
+                                        Preprint submitted to IEEE Robotics and Automation Letters as Submission for RA-L only
+                                                            Received August 31, 2026 22:32:28 Pacific Time
+                                            CONFIDENTIAL. Limited circulation. For review only
+                                                   IEEE RA-L submission 26-5356.1
+                                                                          TABLE II
+                                                            S IMULATION CONTROLLER COMPARISON .
+
+                 Method                  Mean step reward               q RMS (deg)                EE position (mm)            EE orientation (deg)
+                 Nominal DDP          2.42296 ± 0.00130             0.58668 ± 0.00011            0.88855 ± 0.00286             0.70421 ± 0.00029
+                 Direct RL            2.71734 ± 0.00145             0.22675 ± 0.00007            1.58232 ± 0.00375             0.23551 ± 0.00244
+                 Proposed            3.56400 ± 0.00104             0.05781 ± 0.00063            0.22595 ± 0.00116             0.07650 ± 0.00052
+              Mean ± sample standard deviation across three evaluations. Higher mean step reward is better; lower values are better for all other metrics.
+                           TABLE III
+                                                                                      range in Table I; 1.0 kg exceeds the upper bound and is there-
+          S TAGED SIMULATION ABLATION CONFIGURATION .
+                                                                                      fore out of distribution (OOD). For each nonzero payload,
+              Method                W.     Rec.      ID     DEI                       the nominal model continued to assume no external payload,
+              MLP baseline          –        –       –        –                       introducing simultaneous errors in mass, center of mass, and
+              MLP + W.             yes       –       –        –                       inertia. Joint velocity control was excluded because its built-
+              Rec. + W.            yes      yes      –        –                       in servo compensates for the payload through a different
+              Rec. + W. + ID       yes      yes     yes       –
+              Proposed             yes      yes     yes      yes                      mechanism. Fig. 4 summarizes the tracking trends.
+ W.: reward shaped by DDP value information; Rec.: recurrent encoder;                    The proposed method achieved the lowest mean end-
+ID: inverse dynamics supervision at the interval start; DEI: dual-endpoint            effector position error, mean end-effector orientation error,
+   interface with cascaded filtering, interpolation, and AC supervision.              and joint-position RMS error at every payload, including
+                                                                                      the OOD condition. Relative to both DDP baselines, these
+of measured torque.                                                                   three tracking metrics were at least 71.7% lower. From 0
+D. Hardware Tracking and Torque Results                                               to 1.0 kg, its mean end-effector position error increased by
+                                                                                      1.059 mm, compared with 3.823 and 3.962 mm for Nominal
+   Table V summarizes the hardware tracking and torque                                and Friction DDP, respectively. The tracking advantage there-
+metrics for the training and held-out sets.                                           fore persisted beyond the training range despite simultaneous
+   1) Tracking Accuracy and Generalization to Held-Out                                mass, center-of-mass, and inertia mismatch.
+Trajectories: On both trajectory sets, the proposed method
+achieved the lowest mean end-effector position and orienta-                                                 V. C ONCLUSION
+tion errors and joint-position RMS error. Relative to Friction                           This work addressed planning-to-execution errors caused
+DDP, each of these errors decreased by at least 74.7%                                 by mismatch between the nominal dynamics model and the
+on the training set and 82.7% on the held-out set. The                                physical robot, while retaining the DDP controller and learn-
+joint velocity controller achieved the lowest joint-velocity                          ing only bounded residual torques. Stored DDP trajectory
+RMS error. These results indicate that the task-space pose                            and value information are used to structure the policy inputs
+and joint-position tracking advantage extends to trajectories                         and learning objectives, while the dual-endpoint interface
+excluded from training.                                                               connects the low-rate policy to the high-rate torque loop
+   2) Torque and Torque Rate Metrics: Friction DDP min-                               through piecewise-linear interpolation.
+imized the aggregate torque-rate RMS and percentiles. The                                In simulation, the method improved tracking over Nom-
+proposed method kept torque RMS within 1.6% of the                                    inal DDP and learned more efficiently than Direct RL. On
+minimum baseline value and achieved the lowest end-effector                           hardware, it achieved the lowest end-effector pose and joint-
+pose and joint-position errors, although it did not minimize                          position errors on the training and held-out sets and retained
+the aggregate torque-rate metrics. Thus, the tracking gains                           this advantage under a payload beyond the training random-
+did not require a substantial increase in torque magnitude.                           ization range. These tracking gains required no substantial
+                                                                                      increase in torque magnitude, although the method did
+E. Hardware Ablation of the Dual-Endpoint Interface                                   not minimize every aggregate torque-rate metric. The dual-
+   Table VI compares the complete dual-endpoint design with                           endpoint interface also produced smoother torque-command
+a ZOH residual under otherwise matched conditions.                                    evolution than zero-order hold.
+   Across both trajectory sets, the proposed method reduced                              The framework assumes that DDP provides a valid nom-
+every metric in Table VI by at least 12.9% relative to                                inal trajectory and local feedback structure; the learned
+ZOH. The lower tracking errors and lower RMS values                                   residual compensates for model-induced execution mismatch
+for commanded torque rate, measured torque rate, and the                              around this nominal solution rather than task-level planning
+second derivative of measured torque indicate smoother                                errors. Within this scope, the results indicate that DDP-
+torque-command evolution.                                                             guided residual learning can provide a practical means
+                                                                                      of transferring model-based optimal trajectories to torque-
+F. Robustness to Unmodeled Payloads                                                   controlled hardware without replacing the nominal controller
+   The payload evaluation compared the proposed method                                or evaluating the policy at the torque-loop rate.
+with Nominal DDP and Friction DDP at 0, 0.2, 0.6, and                                                                  R EFERENCES
+1.0 kg. The nonzero payloads were assembled from the
+                                                                                        [1] O. Khatib, “A unified approach for motion and force control of robot
+interchangeable components shown in Fig. 3(c). The 0.2- and                                 manipulators: The operational space formulation,” IEEE J. Robot.
+0.6-kg conditions lie within the payload-mass randomization                                 Autom., vol. 3, no. 1, pp. 43–53, Feb. 1987.
+
+
+                Preprint submitted to IEEE Robotics and Automation Letters as Submission for RA-L only
+                                    Received August 31, 2026 22:32:28 Pacific Time
+                                                                             CONFIDENTIAL. Limited circulation. For review only
+                                                                                    IEEE RA-L submission 26-5356.1
+                                                                                                           TABLE IV
+                                                                                            S TAGED SIMULATION COMPONENT ABLATION .
+
+        Method             Mean step reward                                     q RMS (deg)                              q̇ RMS (deg/s)                        EE pos. (mm)                      EE ori. (deg)                                  τRL RMS (N m) τ̇RL RMS (N m/s)
+        MLP baseline   3.348 ± 0.046 0.0576 ± 0.0019 0.867 ± 0.058 0.304 ± 0.023 0.0898 ± 0.0096 0.568 ± 0.038                                                                                                                                                           23.38 ± 0.18
+        MLP + W.       3.356 ± 0.035 0.0584 ± 0.0013 0.918 ± 0.048 0.273 ± 0.026 0.0943 ± 0.0091 0.595 ± 0.038                                                                                                                                                           52.05 ± 1.36
+        Rec. + W.      3.411 ± 0.022 0.0536 ± 0.0011 0.770 ± 0.044 0.237 ± 0.010 0.0916 ± 0.0059 0.597 ± 0.039                                                                                                                                                           47.08 ± 0.12
+        Rec. + W. + ID 3.446 ± 0.027 0.0485 ± 0.0022 0.702 ± 0.056 0.262 ± 0.025 0.0897 ± 0.0110 0.584 ± 0.039                                                                                                                                                           35.58 ± 0.19
+        Proposed       3.429 ± 0.007 0.0467 ± 0.0005 0.674 ± 0.009 0.210 ± 0.005 0.0756 ± 0.0020 0.578 ± 0.006                                                                                                                                                           45.40 ± 0.19
+                   Mean ± sample standard deviation over three evaluations. Higher mean step reward is better; lower values are better for all other metrics.
+                                                                                                       TABLE V
+                                                                                H ARDWARE TRACKING AND TORQUE METRICS ; LOWER IS BETTER .
+
+                                                                                                        Tracking error                                                                                                               Measured torque metrics
+             Set          Method                                                EE mean EE max Ori. mean q RMS q̇ RMS τ̇J RMS P95 (|τ̇J |) P99 (|τ̇J |) max |τ̇J | τJ RMS
+                                                                                     (mm)             (deg)     (deg/s)                 (N m/s)                     (N m)
+             Training Nominal DDP                                                1.811          4.017                                   1.014          1.379        2.419       35.993                                       75.303            136.739        574.524       4.204
+                      Friction DDP                                               1.307          2.653                                   0.774          1.007        2.207       34.916                                       73.991            131.293        504.671       4.195
+                      Joint velocity control                                     0.431          1.313                                   0.228          0.132        0.433       38.002                                       80.132            140.226        635.175       4.182
+                      Proposed                                                   0.331          1.138                                   0.189          0.107        2.640       43.896                                       90.998            151.671        572.136       4.237
+             Held-out Nominal DDP                                                2.565          5.452                                   1.348          1.216        2.422       28.450                                       59.606            106.483        431.478       4.009
+                      Friction DDP                                               1.962          3.706                                   1.184          0.968        2.302       28.102                                       58.793            104.360        438.124       3.976
+                      Joint velocity control                                     0.351          1.178                                   0.224          0.128        0.425       31.552                                       65.982            117.706        412.656       4.021
+                      Proposed                                                   0.338          1.088                                   0.203          0.110        2.678       37.755                                       77.707            129.650        510.147       4.038
+                                                                                                 TABLE VI
+                                                                     H ARDWARE ABLATION OF THE DUAL - ENDPOINT INTERFACE ; LOWER IS BETTER .
+
+                                                             Set             Method                    EE mean                                     q RMS        q̇ RMS            ˙ RMS
+                                                                                                                                                                                τcmd                                                 τ̇J RMS          τ̈J RMS
+                                                                                                        (mm)                                        (deg)        (deg/s)          (N m/s)                                             (N m/s)         (N m/s2 )
+                                                             Training        ZOH residual               0.441                                      0.132            3.705         52.537                                              50.416          882.579
+                                                                             Proposed                   0.331                                      0.107            2.640         39.899                                              43.896          548.352
+                                                             Held-out        ZOH residual               0.424                                      0.132            3.446         46.711                                              44.031          798.450
+                                                                             Proposed                   0.338                                      0.110            2.678         36.273                                              37.755          501.488
+
+                                                                                                       Nominal DDP                                          Friction DDP              Proposed
+
+                                                              (a) EE position                                                                  (b) EE orientation                                                                (c) Joint position
+                                                                                                                                                                                          RMS joint position error (deg)
+                                                                                                         Mean orientation error (deg)
+
+
+
+
+                                                         6                                                                                                                                                                 1.5
+                              Mean position error (mm)
+
+
+
+
+                                                                                                                                        1.00
+
+                                                         4                                                                              0.75                                                                               1.0
+                                                                                          OOD                                           0.50                                OOD                                                                              OOD
+                                                         2                                                                                                                                                                 0.5
+                                                                                                                                        0.25
+
+                                                         0                                                                              0.00                                                                               0.0
+                                                              0      0.2          0.6            1.0                                           0     0.2            0.6         1.0                                              0      0.2           0.6          1.0
+                                                                   Attached payload mass (kg)                                                      Attached payload mass (kg)                                                         Attached payload mass (kg)
+
+                                                             Fig. 4.       Payload robustness; shading denotes the out-of-distribution (OOD) 1.0-kg condition.
+
+ [2] A. Albu-Schäffer, C. Ott, and G. Hirzinger, “A unified passivity-                                                                                          [11] C. Li, F. Liu, Y. Wang, and M. Buss, “Data-informed residual
+     based control framework for position, torque and impedance control                                                                                               reinforcement learning for high-dimensional robotic tracking control,”
+     of flexible joint robots,” Int. J. Robot. Res., vol. 26, no. 1, pp. 23–39,                                                                                       IEEE/ASME Trans. Mechatron., vol. 30, no. 3, pp. 1681–1691, Jun.
+     Jan. 2007.                                                                                                                                                       2025.
+ [3] J. T. Betts, Practical Methods for Optimal Control and Estimation Us-                                                                                       [12] X. B. Peng, M. Andrychowicz, W. Zaremba, and P. Abbeel, “Sim-to-
+     ing Nonlinear Programming, 2nd ed. Philadelphia, PA, USA: SIAM,                                                                                                  real transfer of robotic control with dynamics randomization,” in Proc.
+     2010.                                                                                                                                                            IEEE Int. Conf. Robot. Autom. (ICRA), 2018, pp. 3803–3810.
+ [4] M. P. Kelly, “An introduction to trajectory optimization: How to do                                                                                         [13] R. Grandia et al., “Design and control of a bipedal robotic character,”
+     your own direct collocation,” SIAM Rev., vol. 59, no. 4, pp. 849–904,                                                                                            in Proc. Robot.: Sci. Syst. (RSS), 2024.
+     Nov. 2017.                                                                                                                                                  [14] C. Mastalli et al., “Crocoddyl: An efficient and versatile framework
+ [5] J.-J. E. Slotine and W. Li, “On the adaptive control of robot manipu-                                                                                            for multi-contact optimal control,” in Proc. IEEE Int. Conf. Robot.
+     lators,” Int. J. Robot. Res., vol. 6, no. 3, pp. 49–59, Sep. 1987.                                                                                               Autom. (ICRA), 2020, pp. 2536–2542.
+ [6] S. Levine, C. Finn, T. Darrell, and P. Abbeel, “End-to-end training of                                                                                      [15] Z. Huang, Y. Cheng, R. Liu, and M. Shan, “A hierarchical planning
+     deep visuomotor policies,” J. Mach. Learn. Res., vol. 17, no. 39, pp.                                                                                            framework for self-assembly and self-reconfiguration of autonomous
+     1–40, Apr. 2016.                                                                                                                                                 modular space robots,” Robot. Auton. Syst., vol. 197, Art. no. 105273,
+ [7] S. Levine and P. Abbeel, “Learning neural network policies with                                                                                                  2026.
+     guided policy search under unknown dynamics,” in Adv. Neural Inf.                                                                                           [16] J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and O. Klimov,
+     Process. Syst., vol. 27, 2014.                                                                                                                                   “Proximal policy optimization algorithms,” arXiv:1707.06347, 2017.
+ [8] G. Lee, S. S. Srinivasa, and M. T. Mason, “GP-ILQG: Data-driven                                                                                             [17] E. Todorov, T. Erez, and Y. Tassa, “MuJoCo: A physics engine for
+     robust optimal control for uncertain nonlinear dynamical systems,”                                                                                               model-based control,” in Proc. IEEE/RSJ Int. Conf. Intell. Robots Syst.
+     arXiv:1705.05344, 2017.                                                                                                                                          (IROS), 2012, pp. 5026–5033.
+ [9] T. Silver, K. Allen, J. Tenenbaum, and L. Kaelbling, “Residual policy                                                                                       [18] E. Madsen, O. S. Rosenlund, D. Brandt, and X. Zhang, “Adaptive
+     learning,” arXiv:1812.06298, 2018.                                                                                                                               feedforward control of a collaborative industrial robot manipulator
+[10] T. Johannink et al., “Residual reinforcement learning for robot con-                                                                                             using a novel extension of the generalized Maxwell-Slip friction
+     trol,” in Proc. IEEE Int. Conf. Robot. Autom. (ICRA), 2019, pp. 6023–                                                                                            model,” Mech. Mach. Theory, vol. 155, Art. no. 104109, Jan. 2021.
+     6029.
+
+
+
+                   Preprint submitted to IEEE Robotics and Automation Letters as Submission for RA-L only
+                                       Received August 31, 2026 22:32:28 Pacific Time
+

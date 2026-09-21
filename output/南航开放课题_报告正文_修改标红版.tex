@@ -1,0 +1,537 @@
+% !TeX program = xelatex
+% 2026-09-21 复核修订版：保留必要的研究论证与衔接修改，相对原稿标红。
+% 题目及正文采用柔性桁架支撑等表述；撤回过细的新增技术承诺。
+% 研究目标保持一段；关键科学问题名称、图1及公式保留原稿。
+% 可编译主文件；参考文献在本文件内，技术路线图采用正文内的TikZ矢量图。
+% 正文按申请书模板的一、二、三部分组织。题目另填模板“项目名称”。
+% 申请金额按重点课题上限30万元测算；技术指标为拟定目标。
+% 已有工作依据：26-0912.pdf、已有组会材料及已核查的控制程序。
+% 匿名研究稿不列作已发表论文；机器人代码仅作只读核查。
+% 本项目不采用结构模态建模；文献、已有成果与奖励中的相关名称保留原有表述。
+% 地面实验依托现有基座振动模拟与机器人作业实验平台，以基座运动模拟柔性桁架振动。
+\documentclass[UTF8,a4paper,zihao=-4,fontset=fandol]{ctexart}
+\usepackage[left=2.6cm,right=2.6cm,top=2.5cm,bottom=2.5cm]{geometry}
+\usepackage{amsmath,amssymb,bm,booktabs,longtable,array,tabularx}
+\usepackage{enumitem,setspace,xcolor,caption,needspace,placeins}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+\graphicspath{{./}{../}}
+\usepackage[unicode,hidelinks]{hyperref}
+\usepackage{xurl}
+\hypersetup{pdftitle={柔性桁架支撑下空间机器人的运动控制与接触引导组装研究},pdfsubject={南航重点实验室开放课题申请书报告正文}}
+\setstretch{1.32}
+\setlength{\parindent}{2em}
+\setlength{\parskip}{0.15em}
+\setlength{\emergencystretch}{2em}
+\clubpenalty=10000
+\widowpenalty=10000
+\displaywidowpenalty=10000
+\raggedbottom
+\setlist[enumerate]{leftmargin=2.2em,itemsep=0.3em,topsep=0.3em}
+\captionsetup{font=small,labelfont=bf,labelsep=quad,skip=8pt}
+\ctexset{
+ section={format=\zihao{4}\bfseries,name={,、},number=\chinese{section},aftername={},beforeskip=1.2em,afterskip=0.7em},
+ subsection={format=\zihao{-4}\bfseries,number=\arabic{subsection},aftername={.\ },beforeskip=1em,afterskip=0.5em},
+ subsubsection={format=\zihao{-4}\bfseries,number=\arabic{subsection}.\arabic{subsubsection},aftername={\quad},beforeskip=0.8em,afterskip=0.3em}
+}
+\newcommand{\topic}[1]{\par\addvspace{0.5em}\noindent\textbf{#1}\par\nobreak}
+\newcommand{\needinfo}[1]{\par\noindent{\color{red!65!black}\textbf{〔待补充〕}#1}\par}
+\newcommand{\rev}[1]{{\color{red}#1}}
+\pdfstringdefDisableCommands{\def\rev#1{#1}}
+\newcommand{\doi}[1]{\href{https://doi.org/#1}{\nolinkurl{#1}}}
+\newcommand{\SE}{\mathrm{SE}(3)}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+\renewcommand{\arraystretch}{1.25}
+\pagestyle{plain}
+
+\begin{document}
+
+\begin{center}
+ {\zihao{3}\bfseries \rev{柔性桁架支撑下空间机器人的运动控制与接触引导组装研究}\par
+\par}
+ \vspace{0.55em}
+ {\zihao{-4}航空航天结构力学及控制全国重点实验室开放课题\quad 重点课题}
+\end{center}
+\vspace{0.35em}
+
+% ==================== 报告正文开始 ====================
+\section{立项依据与研究内容}
+
+\subsection{项目的立项依据}
+
+\subsubsection{研究意义}
+
+大型空间天线、太空望远镜等装备的发展，对空间设施的尺度、功能与建造精度提出了更高要求。受运载包络和发射能力限制，依靠单次整体发射与在轨展开难以满足不断增长的建造需求，通过模块分批运输、机器人在轨转运与装配逐步形成大型设施，成为拓展空间装备能力的重要途径\cite{hu2025,wu2024}。在这一过程中，空间机器人需要依附已建结构，连续完成模块拾取、转运、接口对准和安装等操作。机器人所依附结构的运动、搬运物体的质量变化及接触状态转换，使机器人面临复杂的动力学条件与精密装配要求，传统基于固定基座和理想动力学模型的控制方法难以兼顾运动精度与接触柔顺性。因此，亟需发展适应基座运动与多源不确定性的机器人运动与组装控制方法，满足大型空间设施自主、精密、可靠建造的需求。
+
+空间机器人依附柔性桁架作业时，其末端运动与接触响应受机械臂运动、柔性桁架变形及二者动力学耦合的共同影响。\rev{机械臂运动产生的反作用力与力矩}经基座传递至桁架并激发结构振动，桁架振动又引起机器人基座的位置和姿态变化，并经机械臂传递至作业端，影响末端定位与接口对准；惯性参数、负载、摩擦及执行时延等偏差进一步增加精确控制的难度。单纯依靠提高反馈增益减小运动误差，难以协调振动扰动抑制所需的控制刚度与接触过程所需的柔顺性。尤其在接口对准与插接阶段，较高的控制刚度限制了机器人顺应接触约束的调整能力，目标位姿偏差与桁架振动易引起接触力增大，引发接口卡滞或接触冲击。因此，需要揭示基座运动、动力学失配与接触作用对末端响应的影响规律，\rev{协调振动扰动下的运动精度与接触柔顺性}，实现振动环境下的精确对准与平稳插接。
+
+此外，上述耦合系统具有高维数、多时间尺度和模型不确定性等特征，基于高维模型在线求解结构力学响应，难以兼顾动力学描述精度与反馈控制的实时性。面向在轨作业的测控条件，需要提取影响末端运动与接触响应的主要耦合信息，降低控制对完整结构模型和高维动力学求解的依赖，并结合运动与接触反馈调节控制作用，以适应基座运动及接触状态变化。
+
+针对上述问题，\rev{本项目以柔性桁架支撑的空间机器人为研究对象}，研究面向实时控制的耦合动力学表征方法，结合几何阻抗设计与动力学优化开展机器人运动控制，利用接触几何信息和接触反馈实现接口对准与柔顺组装，并通过地面试验考核验证。研究有助于阐明柔性桁架振动与多源不确定性共同作用下的末端运动和接触响应规律，形成兼顾实时性、运动精度与接触柔顺性的控制方法，为大型空间天线、太空望远镜等装备的机器人在轨组装提供理论依据与技术支撑。
+
+\subsubsection{国内外研究现状及发展动态}
+
+\topic{（1）柔性结构与空间机器人的耦合动力学}
+
+随着在轨操作由航天器捕获向大型结构组装拓展，动力学研究的重点逐渐由基座与机械臂之间的运动耦合，转向机器人运动、结构变形与组装过程的共同作用\cite{hu2025,wu2024,papadopoulos2021}。这一变化的关键在于，机器人所依附的结构同时承担作业支撑与被组装对象的功能，其质量分布、连接关系和动力学边界随组装进程变化。因此，耦合模型不仅需要描述给定构型下的运动响应，还需要反映构型演化及作业状态转换带来的动力学变化。
+
+围绕这一需求，现有建模方法主要关注动态特征保留与模型规模控制。模态缩减及模型降阶通过保留主要变形特征降低系统维数，为复杂柔性多体系统和组装多板结构的分析提供了有效途径\cite{sonneville2021,min2026}；时变动力学边界研究则表明，模型参数与约束条件需要随作业状态调整，固定边界下的简化结果难以直接覆盖整个组装过程\cite{ni2024}。从方法特点看，模型简化的效果取决于被保留的动态特征是否与关注的作业响应相匹配。面向末端精度与接口受力的控制模型，需要进一步关注结构运动如何通过安装端传递至机械臂，而非仅以整体结构响应的近似精度评价模型。
+
+耦合关系还受到结构尺度与接触阶段的影响。超大型结构的组装分析显示，重力梯度、科里奥利效应等空间扰动会影响控制需求与振动响应，其影响随结构尺度和作业条件变化\cite{yang2023}；柔性模块接触建模则将冲击、结构变形与机器人运动联系起来，揭示接近速度和控制参数对接触响应的作用\cite{wucontact2026}。由此可见，自由转运与接触组装对模型的要求有所不同：前者侧重运动与结构振动的传播，后者还需描述接触约束建立及载荷突变。两类过程的衔接，是评价组装精度与接触平稳性的基础。
+
+在模型应用上，研究已由预测结构响应逐步转向利用耦合关系设计运动与控制。振动反馈直接依据机器人--结构相互作用调节系统响应\cite{swei2020}；基于线性分式表示的路径优化，将几何变化、柔性动态及参数不确定性纳入稳定性和性能评价\cite{rodrigues2025}；直接轨迹优化及递推动力学方法则将耦合方程与作业约束共同纳入求解，改善可行轨迹的生成效率\cite{liu2026,gong2026}。这些方法的共同进展是把结构响应作为运动设计的组成部分，其应用侧重点分别体现在反馈调节、性能分析和约束规划。
+
+总体而言，耦合动力学研究正向构型演化、环境扰动与接触作用的统一描述发展。但高保真仿真、轨迹规划与高频反馈对模型信息和计算速度的要求并不相同，规划计算效率的提高还需结合测量条件和模型偏差评价其闭环意义。因此，面向实时控制，有必要提取安装端运动与受力对作业端响应的主要影响，在保留必要耦合信息的基础上减少在线求解负担，建立动力学分析与反馈控制之间的联系。
+
+\topic{（2）运动振动协调与阻抗柔顺控制}
+
+运动与振动协调的核心，是在完成末端任务的同时控制机器人对柔性结构的反作用。现有方法主要从反作用调节和柔性响应反馈两方面展开：反作用零空间及其优化方法利用机械臂冗余运动，在保证末端任务的基础上减少对结构的激励\cite{nenchev1999,yin2023}；柔性状态估计与振动反馈方法则根据结构响应进行补偿或主动调节，以改善振动对作业的影响\cite{patel2024,zhou2025}。两类方法分别着眼于激励的产生与响应的演化，具有互补性。前者的调节能力受构型与剩余自由度限制，后者依赖状态信息及可用执行机构，因而需要结合具体机器人--结构系统确定其适用条件。
+
+接触任务进一步将运动振动协调与柔顺响应联系起来。六自由度阻抗控制的发展重点之一，是使位置、姿态误差及其对应的力和力矩具有一致的几何表达。基于$\SE$的几何阻抗在刚体位姿空间中构造势能和误差，避免位置与姿态分别设计时对二者耦合关系描述不足\cite{seo2023}；李群与李代数势能的比较，以及二者之间的阻抗映射研究，进一步说明误差表示会影响有限位姿偏差下的恢复作用和动态响应\cite{seo2024,kim2025}。这类方法为位置与姿态协同控制提供了基础，但所设计的阻抗关系仍需通过机器人动力学与关节驱动实现，几何表达的一致性不能替代对实际驱动能力的分析。
+
+针对模型和环境不确定性，相关研究主要通过鲁棒补偿或在线自适应调整改善阻抗实现。滑模补偿与模糊增益调节侧重减弱动力学失配对力和运动跟踪的影响\cite{liudb2024}；环境刚度估计与分层控制则进一步将柔性关节、基座振动和接触条件变化纳入协调，结合任务空间阻抗与零空间调节处理多种动态因素\cite{liuadaptive2026}。这一发展表明，柔顺控制已由预设环境条件下的参数设计，逐步转向利用实时反馈适应机器人与环境变化。不过，相关仿真结果向实际系统推广时，仍需考察状态估计误差、驱动限制和执行时延对闭环响应的影响。
+
+从上述研究可以看出，末端精确运动、反作用调节与接触柔顺性通过同一组关节驱动相互关联。当关节运动或力矩达到限制时，原本分别设计的运动、振动和阻抗目标可能难以同时实现；基座运动又会改变接触端的实际速度与受力。因此，该方向需要进一步研究驱动约束下可实现的阻抗响应，将几何阻抗、力矩分配与安装端反作用统一分析，明确不同振动和负载条件下运动精度与柔顺性的协调关系。
+
+\topic{（3）接触信息引导的位姿估计与柔顺组装}
+
+柔顺组装研究正由利用接触反馈调节受力，进一步发展为利用接触约束修正目标与引导运动。已有空间模块对接研究根据接触力误差在线调整柔顺轨迹，并通过地面实验验证力与运动协调的有效性\cite{shi2024}。然而，力跟踪与几何对准反映的是不同的任务要求：机器人可能在较小接触力下保持错误的接口偏置，也可能因姿态偏差形成局部卡滞。因此，目标位姿不确定条件下的组装，需要同时利用接触力的动态信息与接口配合的几何信息。
+
+围绕接触几何的获取与利用，现有方法形成了联合状态估计和接触模型配准等思路。前者将触觉、机器人运动和接触约束纳入统一估计，通过主动运动不断更新物体位姿与接触状态\cite{kimtactile2023}；后者通过探测采样局部接触流形，并与预先建立的接口接触模型配准，获得复杂轴孔接口的位姿修正\cite{negi2025}。两类方法都利用多次接触观测累积几何信息，其差异主要在于信息组织方式与先验模型的使用。接触观测能否充分约束目标偏差，取决于接口几何、接触分布及探测运动，因此位姿估计与运动设计需要相互配合。
+
+在组装执行层面，柔顺运动与主动接触交互的结合，使机器人能够在运动过程中逐步定位孔位、修正插接方向，并利用环境约束提高对位姿不确定性的适应能力\cite{chen2025}。结合上述估计方法可以看出，接触既提供运动约束，也提供目标修正所需的信息，控制过程需要兼顾信息获取与受力调节。\rev{对柔性支撑条件下的机器人而言}，这一关系更加复杂：接触位姿变化可能同时来自目标偏差、基座振动与机器人柔顺响应；用于估计目标的探测运动和参考更新，又会改变接触力及安装端反作用。因此，将已有方法用于振动条件下的组装，需要分析观测误差对目标估计的影响，并协调参考修正速度与实际阻抗响应。
+
+综上，相关研究已形成由耦合动力学分析、运动振动协调到接触估计与柔顺操作的方法基础。\rev{面向桁架振动条件下的机器人精确组装}，进一步研究的重点在于贯通这些环节：以主要耦合作用的实时表征支撑受约束运动控制，以接触几何修正减小目标位姿偏差，并明确参考变化、实际阻抗与安装端受力之间的关系。\rev{相关方法将在基座运动条件下通过地面试验验证。}
+\subsubsection{\rev{与相关指南的关系}}
+
+\rev{本项目主要对应指南2.2“轻质柔性结构动力学设计与分析”中柔性空间结构在轨组装及刚柔耦合体系力学控制研究，围绕机器人安装界面的动态作用、受约束运动与接触组装开展研究；同时衔接指南2.5关于多源不确定性条件下闭环分析与控制的研究内容。}
+\begingroup
+\small
+\setstretch{1.08}
+\setlength{\parskip}{0pt}
+
+\renewcommand{\refname}{主要参考文献}
+\begin{thebibliography}{99}
+\setlength{\itemsep}{0.3em}
+\bibitem{hu2025} 胡海岩, 田强, 文浩, 罗凯, 马小飞. 极大空间结构在轨组装的动力学与控制[J]. 力学进展, 2025, 55(1): 1--29. DOI: \doi{10.6052/1000-0992-24-044}.
+\bibitem{wu2024} 吴志刚, 蒋建平, 邬树楠, 李庆军, 王兴, 谭述君, 邓子辰. 航天结构空间组装动力学与控制研究进展[J]. 力学进展, 2024, 54(2): 344--390. DOI: \doi{10.6052/1000-0992-23-041}.
+\bibitem{papadopoulos2021} Papadopoulos E, Aghili F, Ma O, Lampariello R. Robotic manipulation and capture in space: A survey[J]. Frontiers in Robotics and AI, 2021, 8: 686723. DOI: \doi{10.3389/frobt.2021.686723}.
+\bibitem{sonneville2021} Sonneville V, Scapolan M, Shan M, Bauchau O A. Modal reduction procedures for flexible multibody dynamics[J]. Multibody System Dynamics, 2021, 51(4): 377--418. DOI: \doi{10.1007/s11044-020-09770-w}.
+\bibitem{min2026} Min K, Fan W, Ren H, Zhou P, Wang Y, Zhang X. Dynamic modeling and model order-reduction of on-orbit assembled multi-plate structures[J]. International Journal of Mechanical Sciences, 2026, 313: 111296. DOI: \doi{10.1016/j.ijmecsci.2026.111296}.
+\bibitem{ni2024} Ni S, Chen W, Chen T. Dynamic modeling and analysis of multi-flexible-link space manipulators under time-varying dynamic boundary conditions[J]. Advances in Space Research, 2024, 74(10): 5224--5243. DOI: \doi{10.1016/j.asr.2024.07.067}.
+\bibitem{yang2023} Yang G, Zhang L, Yu S, Meng S, Wang Q, Li Q. Influences of space perturbations on robotic assembly process of ultra-large structures[J]. Nonlinear Dynamics, 2023, 111(11): 10025--10048. DOI: \doi{10.1007/s11071-023-08395-w}.
+\bibitem{wucontact2026} Wu L, Wang M, Luo J, Zhang D. Dynamic modeling and analysis of space robots with an irrotational contact model for on-orbit assembly[J]. Aerospace Science and Technology, 2026, 176: 112117. DOI: \doi{10.1016/j.ast.2026.112117}.
+\bibitem{swei2020} Swei S S M, Jenett B, Cramer N B, Cheung K. Modeling and control of robot-structure coupling during in-space structure assembly[C]//AIAA Scitech 2020 Forum. 2020: AIAA 2020-1544. DOI: \doi{10.2514/6.2020-1544}.
+\bibitem{rodrigues2025} Rodrigues R, Preda V, Sanfedino F, Alazard D. Dynamics modeling and path optimization for the on-orbit assembly of large flexible structures using a multi-arm robot[J/OL]. CEAS Space Journal, 2025. DOI: \doi{10.1007/s12567-025-00675-y}.
+\bibitem{liu2026} Liu P, Wang M, Ma W, Luo J, Liu C. Direct trajectory optimization of coupled constrained system formed by the space manipulator and the flexible structure[J]. Aerospace Science and Technology, 2026, 168: 111038. DOI: \doi{10.1016/j.ast.2025.111038}.
+\bibitem{gong2026} Gong Y, Wen H. Recursive modeling and trajectory optimization of space manipulator mounted on flexible structure[J]. Applied Mathematical Modelling, 2026, 155: 116741. DOI: \doi{10.1016/j.apm.2026.116741}.
+\bibitem{nenchev1999} Nenchev D N, Yoshida K, Vichitkulsawat P, Uchiyama M. Reaction null-space control of flexible structure mounted manipulator systems[J]. IEEE Transactions on Robotics and Automation, 1999, 15(6): 1011--1023. DOI: \doi{10.1109/70.817666}.
+\bibitem{yin2023} 尹旺, 王翔, 王为, 刘冬雨. 柔性基座冗余机械臂的最优反作用控制[J]. 中国空间科学技术, 2023, 43(2): 144--154. DOI: \doi{10.16708/j.cnki.1000-758X.2023.0029}.
+\bibitem{patel2024} Patel D, Damaren C J. Tip and vibration control of space robots using estimated flexible coordinates[J]. Frontiers in Space Technologies, 2024, 5: 1447545. DOI: \doi{10.3389/frspt.2024.1447545}.
+\bibitem{zhou2025} Zhou W, Ye Z, Wu S, Li Y. Coupling dynamic modeling and vibration control of quadruped-robot and large space structure during on-orbit assembly[J]. Space Solar Power and Wireless Transmission, 2025, 2(1): 1--9. DOI: \doi{10.1016/j.sspwt.2025.02.002}.
+\bibitem{seo2023} Seo J, Prakash N P S, Rose A, Choi J, Horowitz R. Geometric impedance control on $\SE$ for robotic manipulators[J]. IFAC-PapersOnLine, 2023, 56(2): 276--283. DOI: \doi{10.1016/j.ifacol.2023.10.1581}.
+\bibitem{seo2024} Seo J, Prakash N P S, Choi J, Horowitz R. A comparison between Lie group- and Lie algebra-based potential functions for geometric impedance control[C]//2024 American Control Conference (ACC). 2024: 1335--1342. DOI: \doi{10.23919/ACC60939.2024.10644201}.
+\bibitem{kim2025} Kim J, Sung M, Choi Y, Park J, Chung W K. Impedance control design framework using commutative map between $\SE$ and $\mathfrak{se}(3)$[J]. IEEE Transactions on Robotics, 2025, 41: 6193--6212. DOI: \doi{10.1109/TRO.2025.3619066}.
+\bibitem{liudb2024} 刘东博, 陈力. 面向在轨组装服务的空间机器人动力学分析及抑振阻抗控制设计[J]. 力学季刊, 2024, 45(3): 688--696. DOI: \doi{10.15959/j.cnki.0254-0053.2024.03.008}.
+\bibitem{liuadaptive2026} Liu P, Ma W, Wang M, Luo J, Liu C. Adaptive impedance control of a flexible-joint manipulator for space assembly operations under base vibrations and environmental uncertainty[J]. Advances in Space Research, 2026, 77(7): 8057--8074. DOI: \doi{10.1016/j.asr.2026.02.005}.
+\bibitem{shi2024} 史玲玲, 肖晓龙, 张晓峰, 范立佳, 单明贺, 田强. 空间机器人在轨组装多模块单元的对接力控制与地面实验[J]. 力学学报, 2024, 56(3): 800--816. DOI: \doi{10.6052/0459-1879-23-458}.
+\bibitem{kimtactile2023} Kim S, Jha D K, Romeres D, Patre P, Rodriguez A. Simultaneous tactile estimation and control of extrinsic contact[C]//2023 IEEE International Conference on Robotics and Automation (ICRA). 2023: 12563--12569. DOI: \doi{10.1109/ICRA48891.2023.10161158}.
+\bibitem{negi2025} Negi A, Manyar O M, Penmetsa D K, Gupta S K. Accurate pose estimation using contact manifold sampling for safe peg-in-hole insertion of complex geometries[C]//2025 IEEE 21st International Conference on Automation Science and Engineering (CASE). 2025: 617--624. DOI: \doi{10.1109/CASE58245.2025.11163996}.
+\bibitem{chen2025} Chen Y, Kimble K, Qian H H, Chanrungmaneekul P, Seney R, Hang K. Robust peg-in-hole assembly under uncertainties via compliant and interactive contact-rich manipulation[C]//Robotics: Science and Systems XXI. 2025. DOI: \doi{10.15607/RSS.2025.XXI.060}.
+\bibitem{qi2025} 祁伊凡, 单明贺, 田强. 空间多柔体系统缩比等效动力学建模方法研究[J]. 中国科学: 物理学 力学 天文学, 2025, 55(2): 224518. DOI: \doi{10.1360/SSPMA-2024-0302}.
+\end{thebibliography}
+\endgroup
+
+\subsection{项目的研究内容、研究目标及拟解决的关键科学问题}
+
+\subsubsection{研究内容}
+
+\rev{本项目面向柔性支撑条件下机器人的精确运动与模块组装}，\rev{采用理论分析、数值仿真与地面试验相结合的方法}，研究桁架振动条件下的耦合动力学与运动控制、目标位姿不确定条件下的接触对准与柔顺组装方法，并开展地面试验验证。具体研究内容如下：
+
+\topic{（1）\rev{柔性桁架支撑下机械臂的耦合动力学与运动控制}}
+
+机器人依附柔性桁架作业时，机械臂运动通过安装端反作用力与力矩激发桁架振动，桁架振动又通过机器人基座的位置与姿态变化影响末端位姿与动态响应。针对上述双向耦合对末端运动与接触响应的影响，从安装界面的运动与受力出发，建立面向实时控制的倒置动力学描述，研究几何阻抗与动力学优化相结合的运动控制方法，为振动环境下的精确运动与接触作业提供基础。主要研究内容如下：
+\begin{enumerate}[label=\arabic*)]
+ \item 研究基座、关节与末端之间的运动耦合及力和力矩传递关系，通过安装端运动与受力表征柔性桁架与机械臂之间的耦合作用，建立以作业端为浮动基的倒置动力学模型，分析基座振动、末端负载及机械臂运动状态对末端响应的影响规律。
+ \item 面向位姿保持与轨迹跟踪任务，研究几何阻抗与动力学优化控制方法，统一描述末端位置与姿态响应，在倒置动力学框架下协调关节运动与力矩分配，并计入关节运动范围、驱动力矩及其变化率限制，实现基座振动条件下的精确运动控制。
+ \item \rev{研究给定运动参考下安装端作用力与力矩的建模偏差及驱动约束对实际阻抗响应的影响}，揭示末端运动精度、接触柔顺性与安装端反作用之间的关联，明确不同基座振动、运动速度及末端负载条件下的控制参数选取依据与方法适用范围。
+\end{enumerate}
+
+\topic{（2）目标位姿不确定条件下的接触对准与柔顺组装}
+
+\rev{基座运动同时影响接触观测与运动执行，目标估计误差与参考跟踪偏差共同作用于对准精度和接触载荷。以已有接触场配准和约束导纳捕获方法为基础，研究接触观测误差与参考修正对组装响应的影响，探索接触引导与受约束运动控制的协调方法。主要研究内容如下：}
+\begin{enumerate}[label=\arabic*)]
+ \item 统一接触观测坐标，分析基座测量误差、时序偏差及接触分布对六维配准的局部影响，识别所选接口中约束较弱的位姿方向，为坐标修正与目标限幅提供依据。
+ \item \rev{以六维配准与五轴约束导纳为基础}，保留修正通道的零输入保持性质，并独立调节轴向接近运动，研究修正速率、偏移限幅与下层跟踪能力的匹配，减小参考变化引起的接触载荷增量。
+ \item \rev{分析目标估计精度的改善在何种条件下能够降低到位误差与接触载荷，为接触引导组装策略及参数选取提供依据。}
+\end{enumerate}
+
+\topic{（3）\rev{柔性支撑条件下机器人运动与组装的地面试验验证}}
+
+依托基座振动模拟与机器人作业实验平台，开展地面试验。平台由基座运动模拟装置、作业机械臂及同步测量系统组成。其中，基座运动模拟装置采用机械臂实现，其末端与作业机械臂基座固定连接，通过施加可重复的平移与转动激励，模拟柔性桁架振动引起的安装端运动；作业机械臂执行运动与组装任务。围绕不同形式的基座运动、末端负载及初始位姿偏差，开展运动控制与典型接口组装的分项及集成试验，验证所提动力学描述与控制方法，明确其适用范围。主要研究内容如下：
+\begin{enumerate}[label=\arabic*)]
+ \item 完善模拟装置与作业机械臂之间的固定连接、典型接口与同步测量系统，开展基座与末端位姿测量系统、安装端与接触端力和力矩传感器的标定，设置不同幅值、频率和方向的基座运动激励，建立可重复的基座振动模拟与试验评价方法。
+ \item 开展位姿保持与轨迹跟踪试验，通过不同基座振动、运动速度及末端负载条件下的数值仿真与实测响应对照，校核安装端作用力与力矩的动力学描述，\rev{评价所提运动控制方法的运动精度、实际阻抗响应、力矩约束满足情况与实时执行能力}。
+ \item 开展不同初始位姿偏差下的典型接口对准、插接及到位保持试验，对比固定参考、接触场配准及接触参考修正的作用，综合评价组装到位误差、接触力与安装端反作用，完成振动环境下机器人运动与组装的地面原理验证。
+\end{enumerate}
+
+\Needspace{5\baselineskip}\subsubsection{研究目标}
+
+\rev{面向大型空间结构在轨组装需求}，建立基于安装界面运动与受力的耦合动力学描述，揭示桁架振动、关节驱动约束与末端运动响应之间的关系，形成几何阻抗与动力学优化相结合的运动控制方法；明确典型接口局部接触观测误差与参考修正对组装响应的影响，\rev{研究接触参考修正与下层跟踪能力的协调关系，形成兼顾接口对准精度与接触柔顺性的接触引导组装方法}；依托基座振动模拟与机器人作业实验平台，验证所提动力学描述与控制方法的有效性，\rev{明确其在不同基座振动、末端负载及初始位姿偏差条件下的适用范围。}
+
+\subsubsection{拟解决的关键科学问题}
+
+\topic{（1）机器人与柔性桁架耦合作用下受约束运动与阻抗响应的形成机制}
+
+柔性桁架振动通过安装端运动与受力改变机械臂的动态响应，机械臂驱动又通过安装端反作用影响柔性桁架的振动响应，使作业端运动与安装端受力相互关联。面向实时控制，需要保留影响末端响应的主要耦合信息，而安装端作用力与力矩的近似描述会带来动力学偏差；关节运动范围与驱动力矩限制还可能使期望运动无法完全实现，导致实际阻抗响应偏离设计值。因此，安装端耦合作用如何经受约束力矩分配影响末端运动与柔顺响应，是本项目需要解决的关键科学问题。
+
+需要揭示安装端运动与受力向末端位姿响应传递的规律，\rev{阐明给定运动参考下安装端作用力与力矩的建模偏差及受约束执行偏差对实际阻抗特性的共同影响}，建立末端运动精度、接触柔顺性与安装端反作用之间的联系，为柔性桁架振动条件下的受约束运动控制及参数选取提供依据。
+
+\topic{（2）基座运动下接触估计误差与参考修正对组装响应的影响机制}
+
+在所选接口的局部接触区域，基座位姿测量与时序误差会传递至目标配准，不同接触分布下各位姿方向的估计敏感程度也不同。接触反馈引起的参考变化还受到驱动约束和跟踪能力限制，因而估计精度的改善未必直接转化为更小的到位误差或接触载荷。
+
+需要通过局部误差分析与对照试验，阐明观测误差向目标估计的传递规律，以及参考修正速率、偏移限幅和执行偏差对到位误差与接触力峰值的共同影响，为有限基座激励下的接触观测处理和参考参数选取提供依据。
+
+\subsection{拟采取的研究方案及可行性分析}
+
+\subsubsection{总体研究思路与技术路线}
+
+对应三项研究内容，按照“耦合动力学与运动控制、接触引导柔顺组装、地面试验验证”的顺序实施。首先以作业端为浮动基建立倒置机械臂动力学模型，通过实际安装端的作用力与力矩计入柔性桁架对机械臂的作用。在此框架下，结合几何阻抗设计与动力学优化，调节末端运动响应，协调关节运动与力矩分配；进一步利用接触流形的几何约束，通过接触场配准估计组装目标，并以有界参考修正实现柔顺对准与插接；最后利用地面实验平台模拟基座振动，开展分项对照与集成验证。技术路线如图\ref{fig:route}所示，各项方案分别说明如下。
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+ block/.style={draw=blue!45!black,fill=blue!3,rounded corners=3pt,
+   text width=12.4cm,align=center,inner sep=8pt,font=\small},
+ flow/.style={-{Stealth[length=2.5mm]},thick,draw=blue!50!black},
+ node distance=0.55cm]
+ \node[block,fill=blue!8] (need) {\textbf{柔性桁架上的精确运动与柔顺组装}\\[3pt]
+ 基座振动\qquad 关节驱动约束\qquad 目标位姿偏差};
+ \node[block,below=of need] (control) {\textbf{研究内容一\quad 耦合动力学与运动控制}\\[3pt]
+ 倒置动力学\quad 几何阻抗\quad 动力学优化};
+ \node[block,below=of control,draw=green!40!black,fill=green!3] (contact) {\textbf{研究内容二\quad 接触对准与柔顺组装}\\[3pt]
+ 接触流形表征\quad 接触场配准\quad 有界参考修正};
+ \node[block,below=of contact,draw=violet!60!black,fill=violet!3] (test) {\textbf{研究内容三\quad 地面试验验证}\\[3pt]
+ 基座振动模拟与同步测量\\[2pt]
+ 位姿保持\quad 轨迹跟踪\quad 典型接口组装};
+ \draw[flow] (need) -- (control);
+ \draw[flow] (control) -- (contact);
+ \draw[flow] (contact) -- (test);
+\end{tikzpicture}
+\caption{项目技术路线与验证关系}
+\label{fig:route}
+\end{figure}
+\FloatBarrier
+
+\subsubsection{倒置动力学建模与运动控制}
+
+沿用以作业端为浮动基的倒置动力学模型，将实际安装基座作为倒置运动链的虚拟末端，通过该处的作用力与力矩描述柔性桁架对机械臂的作用。结合关节状态与作业端的绝对位姿、速度测量，确定倒置模型的运动状态，使基座运动对末端的影响能够通过实际运动反馈进入控制过程。在该建模框架下，结合几何阻抗设计与动力学优化：由几何阻抗关系给出作业端参考加速度，利用动力学二次规划（QP）协调末端运动、关节运动与力矩分配。安装端作用力与力矩的计算以现有静力平衡近似为基线，结合安装端运动、作用力与力矩数据校核其在动态工况下的适用性，\rev{研究动态作用的表征及建模偏差对实际控制响应的影响，为模型完善与控制设计提供依据}。
+
+在地面实验平台中，作业机械臂基座与基座运动模拟装置末端固定连接，该连接处对应模型中的实际安装端；作业机械臂末端对应倒置模型的浮动基。模拟装置提供安装端运动激励，作业机械臂的关节力矩由所提控制方法生成。结合实测安装端运动、作用力与力矩，校核安装端受力模型。由此建立在轨桁架与机器人的相互作用、地面基座激励与控制模型之间的对应关系。\rev{拟结合安装端运动与受力分析，明确给定基座激励能够表征的耦合作用及其适用范围。}
+
+以$T_b,T_d\in\SE$分别表示作业端的实际与期望位姿，$\bm V_b$和$\bm V_d$分别为对应的体速度。采用从实际位姿指向期望位姿的误差定义：
+\begin{equation}
+\begin{aligned}
+ \widetilde T&=T_b^{-1}T_d,\qquad
+ \bm\lambda=\operatorname{Log}(\widetilde T)^\vee,\\
+ \widetilde{\bm V}
+ &=\operatorname{Ad}_{\widetilde T}\bm V_d-\bm V_b
+ =\operatorname{dexp}_{\bm\lambda}\dot{\bm\lambda}.
+\end{aligned}
+\label{eq:pose_error}
+\end{equation}
+其中，$\bm\lambda\in\mathbb R^6$为局部指数坐标，$\operatorname{Ad}$为群伴随映射，$\operatorname{dexp}_{\bm\lambda}$为与上述相对速度约定一致的指数映射微分。在李群上设计几何阻抗关系，并将其转换为指数坐标中的误差动态\cite{kim2025}：
+\begin{equation}
+\begin{aligned}
+ \bm A\dot{\widetilde{\bm V}}+\bm D\widetilde{\bm V}
+ +\operatorname{dexp}_{\bm\lambda}^{-\mathsf T}\bm K\bm\lambda
+ &=\widetilde{\bm F},\\
+ \bm A_\lambda\ddot{\bm\lambda}
+ +\bm D_\lambda\dot{\bm\lambda}+\bm K_\lambda\bm\lambda
+ &=\bm\gamma.
+\end{aligned}
+\label{eq:impedance}
+\end{equation}
+这里，$\bm A$、$\bm D$和$\bm K$分别为期望惯量、阻尼和刚度矩阵，$\widetilde{\bm F}$为按相对运动方向定义的外力旋量。记$\bm J_\lambda=\operatorname{dexp}_{\bm\lambda}$，则$\bm A_\lambda=\bm J_\lambda^{\mathsf T}\bm A\bm J_\lambda$、$\bm D_\lambda=\bm J_\lambda^{\mathsf T}\bm D\bm J_\lambda+\bm J_\lambda^{\mathsf T}\bm A\dot{\bm J}_\lambda$、$\bm K_\lambda=\bm K$、$\bm\gamma=\bm J_\lambda^{\mathsf T}\widetilde{\bm F}$。力与速度采用共轭映射，平移和转动按相应物理尺度设置参数。
+
+由指数坐标中的阻抗关系计算参考加速度，再映射至倒置模型的浮动基：
+\begin{equation}
+\begin{aligned}
+ \ddot{\bm\lambda}_{\rm ref}
+ &=-\bm A_\lambda^{-1}\bm D_\lambda\dot{\bm\lambda}
+   -\bm A_\lambda^{-1}\bm K_\lambda\bm\lambda
+   +\bm A_\lambda^{-1}\bm\gamma,\\
+ \dot{\bm V}_{\rm ref}
+ &=\operatorname{Ad}_{\widetilde T}\dot{\bm V}_d
+   -\operatorname{dexp}_{\bm\lambda}\ddot{\bm\lambda}_{\rm ref}
+   +\operatorname{ad}_{\widetilde{\bm V}}\bm V_b
+   -\dot{\bm J}_\lambda\dot{\bm\lambda}.
+\end{aligned}
+\label{eq:impedance_reference}
+\end{equation}
+其中，$\operatorname{ad}$为李代数伴随算子。浮动基速度与加速度分别记作$\dot{\bm q}_b$和$\ddot{\bm q}_b$，采用与$\bm V_b$及其导数一致的体坐标表示；因此，浮动基加速度参考为$\ddot{\bm q}_{b,\rm ref}=\dot{\bm V}_{\rm ref}$。由此将轨迹前馈与几何阻抗修正统一为动力学优化的参考输入。
+
+按浮动基$b$与关节$j$划分倒置模型动力学，写为
+\begin{equation}
+ \begin{bmatrix}\bm M_{bb}&\bm M_{bj}\\\bm M_{jb}&\bm M_{jj}\end{bmatrix}
+ \begin{bmatrix}\ddot{\bm q}_b\\\ddot{\bm q}_j\end{bmatrix}
+ +\begin{bmatrix}\bm h_b\\\bm h_j\end{bmatrix}
+ =\begin{bmatrix}\bm F_b\\\bm\tau_j\end{bmatrix},
+ \qquad
+ \begin{bmatrix}\bm h_b\\\bm h_j\end{bmatrix}
+ =\bm C\begin{bmatrix}\dot{\bm q}_b\\\dot{\bm q}_j\end{bmatrix}
+  +\bm G-\bm J_g^{\mathsf T}\bm F_e .
+\label{eq:partitioned_dynamics}
+\end{equation}
+其中，$\bm M$、$\bm C$和$\bm G$分别为名义惯性矩阵、科氏及离心项矩阵和重力项；$\bm F_b$为作用在浮动基即实际作业端的接触力旋量，$\bm F_e$为作用在虚拟末端即实际安装端的作用力旋量，$\bm J_g$为其几何雅可比矩阵。自由运动时$\bm F_b=0$，接触阶段由测量或经校核的估计获得；$\bm F_e$以满足浮动基重力平衡的安装端静态作用力旋量为名义值，基座运动引起的安装端动态作用力旋量偏差结合实测数据进行评价。$\bm\tau_j$为待求解的命令等效关节力矩。
+
+将动力学优化写成二次规划问题。令优化变量$\bm x=[\ddot{\bm q}_j^{\mathsf T},\bm\tau_j^{\mathsf T}]^{\mathsf T}$，以关节虚拟阻尼和驱动力矩正则为目标，将分块动力学作为线性等式约束：
+\begin{equation}
+\begin{aligned}
+ \min_{\ddot{\bm q}_j,\,\bm\tau_j}\quad &
+ w_{\ddot q}\|\ddot{\bm q}_j-\ddot{\bm q}_{j,\rm ref}\|^2
+ +w_\tau\|\bm\tau_j-\bm\tau_{j,\rm ref}\|^2,\\
+ \mathrm{s.t.}\quad &
+ \begin{bmatrix}\bm M_{bj}&\bm 0\\\bm M_{jj}&-\bm I\end{bmatrix}
+ \begin{bmatrix}\ddot{\bm q}_j\\\bm\tau_j\end{bmatrix}
+ =\begin{bmatrix}
+ \bm F_b-\bm h_b-\bm M_{bb}\ddot{\bm q}_{b,\rm ref}\\
+ -\bm h_j-\bm M_{jb}\ddot{\bm q}_{b,\rm ref}
+ \end{bmatrix},\\
+ &-k_1\dot{\bm q}_j-k_0(\bm q_j-\bm q_{j,\min})
+ \le\ddot{\bm q}_j,\\
+ &\ddot{\bm q}_j\le-k_1\dot{\bm q}_j+k_0(\bm q_{j,\max}-\bm q_j),\\
+ &\bm\tau_{j,\min}\le\bm\tau_j\le\bm\tau_{j,\max},\qquad
+ |\bm\tau_j-\bm\tau_{j,k-1}|\le\Delta\bm\tau_{j,\max}.
+\end{aligned}
+\label{eq:qp}
+\end{equation}
+其中，$w_{\ddot q}$和$w_\tau$为正权重，$k_0,k_1>0$为关节边界约束参数，不等式按分量施加。关节参考取$\ddot{\bm q}_{j,\rm ref}=-\kappa\dot{\bm q}_j/\Delta t$，$\kappa>0$为虚拟阻尼系数，$\Delta t$为控制周期；取$\bm\tau_{j,\rm ref}=\bm 0$以减小关节驱动力矩。该式给出参考加速度可实现时的基本形式；当驱动或关节边界使其不可实现时，对浮动基加速度参考引入松弛并在目标中惩罚，保持动力学等式及驱动边界的一致性，分析参考放松对实际阻抗响应的影响。关节力矩及其变化量统一纳入约束；实际执行指令按机器人接口的重力约定换算。
+
+在二次规划问题可行及状态估计误差有界的条件下，分析安装端作用力与力矩的建模偏差对位姿与速度误差动态的影响，研究局部闭环稳定与误差有界的条件。进一步考察约束激活时参考加速度松弛对实际阻抗响应的影响，结合基座运动、安装端受力及执行时序的实测数据校核扰动范围，并通过参数变化与约束激活试验检验分析结论的适用性。
+
+\subsubsection{基于接触流形表征与参考修正的柔顺组装}
+
+沿用已有物理方向辅助接触场配准方法（PCF），以离线接触位姿约束场值，以经功共轭坐标变换的物理方向约束场的局部斜率，结合全局场与局部拟合表征典型接口的接触边界。方向信息作为软约束，减轻稀疏采样对场形状的影响。在线以目标先验$T_v$为初值，利用接触位姿求解六维目标估计：
+\begin{equation}
+ \widehat T_\star=\underset{T\in\SE}{\arg\min}
+ \sum_i\rho\!\left(F(T^{-1}T_i)\right).
+ \label{eq:registration}
+\end{equation}
+其中，$T_i$为统一参考系中的接触位姿，$F$为局部位姿坐标中的接触高度残差，$\rho$为鲁棒损失。沿用已采集区域的离线场，以实测基座位姿修正观测坐标，局部迭代估计三维位置与姿态，分别记录原始估计和执行限幅后的目标。通过局部线性化及观测扰动回放，分析测量与时序误差对配准结果的影响，并校核所选激励下的力信号补偿误差；约束较弱方向结合先验与限幅处理。
+
+以配准目标生成名义参考，采用约束导纳捕获方法（RAC）调节两个横向和三个姿态通道，轴向接近与接触维持单独处理。令$\bm c\in\mathbb R^5$为累计修正量，按接触反馈计算增量：
+\begin{equation}
+\begin{aligned}
+ \Delta\bm c_k^*&=\underset{\bm d\in\mathcal C_k}{\arg\min}
+ \left\{\frac{\bm d^{\mathsf T}\bm D_c\bm d}{2\Delta t}
+ -\bm f_{c,k}^{\mathsf T}\bm d\right\},\\
+ \bm c_{k+1}&=\bm c_k+\alpha\Delta\bm c_k^*,\qquad 0\le\alpha\le1.
+\end{aligned}
+ \label{eq:capture}
+\end{equation}
+其中，$\bm f_{c,k}=\bm B_k^{\mathsf T}\bm w_k$为共轭接触输入，$\bm B_k$将修正速度映射为体速度，$\bm w_k$为经力臂与坐标变换的接触力旋量。$\bm D_c$为依据配准残差敏感程度构造、在一次捕获中固定的正定阻尼矩阵；$\mathcal C_k$为包含零的闭凸增量集合，限定累计偏移及经坐标映射的指令变化率，$\alpha$用于有限转动步长校核。不设置弹性回拉项，使修正通道零输入时保持累计纠偏。
+
+该更新保证修正量有界，并满足参考端口的离散广义功不等式。\rev{拟研究修正后的位姿参考与下层控制所需速度、加速度参考的衔接，结合局部误差分析，考察修正参数、跟踪误差与参考加速度松弛对到位精度和接触力峰值的影响，为参考修正与执行能力的匹配提供依据。}理论结论限于局部误差传播和参考子系统，整机效果由对照试验评价。
+
+\subsubsection{地面试验系统与分项、集成验证}
+
+依托现有地面实验平台及测量系统，通过基座运动模拟装置驱动作业机械臂基座产生可重复的平移或转动，模拟柔性桁架振动引起的安装端运动。作业机械臂在此条件下执行位姿保持、轨迹跟踪及典型接口组装任务。依据平台工作范围和预实验结果，按激励幅值、频率与方向设置多组代表性基座振动工况，通过更换末端配重及调整安装位置形成不同质量与惯量条件；以模拟装置保持静止时的同一安装状态作为补充基线，比较基座运动对作业性能的影响。
+
+同步采集作业机械臂关节状态、实际基座运动、作业端位姿以及安装端、接触端的力和力矩，标定悬挂连接的空间外参及力和力矩传感器，并校准模拟装置与作业机械臂的执行时序。分别记录模拟装置的运动指令和作业机械臂基座的实测运动，以实测结果校核激励幅值、频率和相位；采用独立于控制反馈的测量结果评价末端精度与组装到位误差。安装端的力和力矩在统一坐标系下表达，并结合重力和静态受力标定分析其动态变化。
+
+对应第一项研究内容，先通过位姿保持与圆轨迹跟踪试验校核倒置动力学模型与运动控制方法，对比数值仿真与实测响应，考察不同基座振动、末端负载及约束激活时的位姿误差、力矩边界与柔顺响应。记录位置均方根误差、旋转测地误差、关节力矩幅值与变化率，以及安装端力和力矩；同时记录控制计算耗时的分布、最大值及超出控制周期的比例，验证所提方法的实时执行能力。同一工况下，保持模拟装置的激励指令、作业机械臂的任务参考、执行时间与驱动约束一致，并核查实际基座运动的一致性，至少进行5次重复试验；参数对照在代表性工况开展。\rev{结合接触扰动下的力—运动响应，比较设计阻抗与实际响应，检验建模偏差及驱动约束对柔顺特性的影响。}
+
+对应第二项研究内容，采用一种典型接口和一种代表性载荷，\rev{将目标固定于独立刚性基准，以考察机器人安装端相对目标运动时的局部组装响应。}先在基座静止时开展基础柔顺控制、仅配准、仅接触参考修正及二者结合的四组对照，再选取少量平移或转动激励重复关键对照。统一初始偏差、执行预算和保持窗口，记录目标估计误差、独立测量的到位误差、达标次数、接触力峰值及安装端受力。工况与判据结合接口容差、测量精度和预实验结果，在正式对照前固定；成功与失败试验均纳入评价，调参数据不计入独立验证。
+
+对应第三项研究内容，完成上述分项试验及运动与组装的集成验证，围绕基座振动、末端负载与目标初始位姿误差设置对照，分析其对末端运动精度和接触对准的影响，明确各控制环节的贡献及方法适用范围。对于按给定运动施加的基座激励，以同等激励下的末端误差和接触响应评价控制效果，同时报告绝对误差与重复试验离散程度；安装端反作用力与力矩用于分析控制对柔性桁架的作用，其变化不直接等同于柔性结构振动幅值的变化。
+
+\subsubsection{可行性分析}
+
+\topic{（1）控制方法与实验接口具备直接基础}
+
+现有位姿保持与圆轨迹跟踪实验已采用倒置动力学模型，并实现了几何阻抗与动力学优化控制。现有基座振动模拟与机器人作业实验平台可通过安装端运动施加振动扰动，支持几何微分、坐标映射与基座激励的校核，并可在此基础上开展安装端作用力与力矩的建模偏差及驱动约束影响分析，具备分步实施基础。
+
+\topic{（2）接触研究与地面条件能够支撑方法衔接}
+
+已有PCF配准与RAC捕获方法完成了仿真、真机配准回放及多轮对接验证，可直接作为本项目的接触算法基础。现有实物实验采用导纳控制与位置伺服，本项目重点将接触配准与参考修正接入所提运动控制方法，并由基座静止逐步扩展至模拟装置施加基座激励的工况。模拟装置、作业机械臂及接口试验条件已具备，需完善测点、同步采集与系统集成。
+
+\topic{（3）研究范围与实施难点相匹配}
+
+试验由基座运动模拟装置施加运动激励，作业机械臂执行运动与组装任务，验证范围限定于预定振动条件和典型接口。利用实测基座运动与安装端受力校核动力学描述，结合末端误差和关节力矩调整阻抗参数与约束设置，利用先验与修正边界应对接触信息不足。各环节分别验证后再集成，使建模、控制和试验工作与两年开放课题条件相适应。
+
+\subsection{本项目的特色与创新之处}
+
+\topic{（1）面向柔性安装界面的倒置动力学建模与运动控制}
+
+在已有倒置建模基础上，以作业端为浮动基、实际安装端为虚拟末端，将作业端运动、安装端作用力与力矩纳入同一动力学描述，结合几何阻抗设计与动力学优化，协调末端运动响应与关节力矩分配。拟阐明安装端作用力与力矩的建模偏差及驱动约束对实际阻抗响应的共同影响，\rev{形成面向柔性支撑条件下机器人的控制方法}，降低对在线结构力学求解的依赖。
+
+
+
+\topic{（2）柔性桁架振动条件下接触几何与实际阻抗响应协调的对接方法}
+
+在已有接触配准与约束导纳捕获基础上，将基座测量误差、目标估计与受约束执行联系起来，研究参考修正参数对到位精度与接触载荷的共同影响，形成面向典型接口和有限基座激励的观测处理与参考参数选取方法。
+
+\subsection{年度研究计划及预期研究成果}
+
+\subsubsection{年度研究计划}
+
+\topic{2027年1月至6月}
+围绕研究内容一开展倒置动力学与安装端作用力和力矩的建模研究，并启动研究内容三所需试验条件的完善工作。确定基座激励与末端负载工况，完善作业机械臂悬挂连接及接口夹具，完成运动测量系统与力和力矩传感器的标定，并校准执行时序；校核倒置模型中作业端运动、关节驱动及安装端作用力与力矩之间的关系，复核现有控制接口。阶段成果为动力学模型、标定数据及基线试验方案。
+
+\topic{2027年7月至12月}
+完成研究内容一的几何阻抗与动力学优化控制设计及初步闭环分析，开展不同基座振动与末端负载条件下的\rev{位姿保持、轨迹跟踪及阻抗响应试验}，明确安装端作用力与力矩的建模偏差和约束激活对运动与阻抗响应的影响；启动研究内容二的基座运动与接触观测同步校核，检验已有接触场在动态工况下的适用性。形成论文初稿1篇、年度进展报告，并与重点实验室开展专题交流。
+
+\topic{2028年1月至6月}
+围绕研究内容二，完成已有PCF与RAC方法的基座坐标修正，并将接触配准与参考修正接入运动控制过程。开展局部误差与参考参数影响分析，完成基座静止时的四组方法对照，并在预定单向激励下验证，形成方法论文和发明专利申请材料。
+
+\topic{2028年7月至12月}
+完成研究内容二的预定工况对接验证，并集中完成研究内容三的多工况重复试验与系统集成验证。完成基座振动与末端负载组合下的运动对照及代表性载荷下的典型接口组装试验，明确各环节贡献和方法适用范围；整理程序、数据及测试报告，完成论文发表或录用、专利申请和结题材料，与重点实验室开展成果交流。
+
+\subsubsection{预期研究成果与学术交流}
+
+对应三项研究内容，形成包含倒置动力学模型、几何阻抗设计与动力学优化的机器人运动控制程序1套、典型接口的接触配准与参考修正模块1套，并建立地面实验平台的基座振动工况与试验流程，形成同步测量数据集；完成振动扰动下的机器人运动与典型接口组装地面原理验证，提交技术总结报告和试验测试报告各1份。围绕新增研究发表或录用学术论文2篇，申请发明专利1项，培养参与研究的研究生2名。
+
+每年至少与重点实验室研究人员开展1次实质性学术交流，结合模型、实验和阶段成果组织研讨与学术报告；拟参加1次相关国内学术会议，并利用线上形式开展国际学术讨论。项目成果署名、资助标注和知识产权安排按重点实验室开放课题管理要求执行。
+
+\section{研究基础与工作条件}
+
+\subsection{工作基础}
+
+团队围绕空间在轨操作，已形成柔性多体动力学、受约束机器人控制和接触对接的研究积累，可支撑本项目三项研究内容的衔接与实施。
+
+\topic{（1）柔性多体动力学与模型简化基础}
+
+申请人参与了柔性多体系统模态缩减研究\cite{sonneville2021}，团队进一步开展空间多柔体系统缩比等效建模\cite{qi2025}与几何精确梁动力学降阶研究，积累了柔性结构动力学分析和模型校核经验。上述研究积累可支撑本项目对机器人与柔性桁架相互作用的分析、安装端作用力与力矩的校核，以及地面试验条件与实际作业工况之间的对应分析。
+
+\topic{（2）倒置动力学建模与运动控制基础}
+
+团队针对七自由度作业机械臂，已实现以作业端为浮动基、通过实际安装端作用力与力矩描述外部作用的倒置动力学模型，并建立了几何阻抗与动力学优化相结合的运动控制程序。该程序利用关节状态以及运动捕捉系统与惯性测量单元（IMU）的测量数据生成运动参考，在关节运动、力矩及其变化约束下求取控制指令，已支持位姿保持、圆轨迹跟踪及固定基座轨迹跟踪试验，并具备数据记录与回放功能。现有安装端受力模型采用静力平衡近似，为本项目在模拟装置施加基座激励的条件下校核安装端动态作用力与力矩、研究末端运动与安装端力和力矩的关系提供了可扩展的实现基础。
+
+
+
+\topic{（3）接触几何与柔顺对接基础}
+
+团队已开展在轨组装柔顺控制与轨迹规划研究，并完成多模块对接力控制地面实验\cite{shi2024}。近期研究已形成PCF六维目标配准与RAC约束导纳捕获方法，建立了有界修正、零输入保持及参考端口离散广义功关系。论文主表选取的五轮真机试验中，完整方法在65次试验中58次满足两秒保持窗口内位置与姿态均方根误差不超过0.5~mm和0.5$^\circ$的判据，仅RAC为35/65；同组60段非零偏差配准回放的平均三维位置与姿态误差为2.085~mm和1.622$^\circ$。现有评分采用示教对齐基准，真机通过导纳与位置伺服执行。上述结果为本项目进一步开展动态基座下的力矩控制融合及独立测量验证提供了基础。
+
+\subsection{工作条件}
+
+\topic{（1）已具备的条件}
+
+本项目依托现有基座振动模拟与机器人作业实验平台，通过基座运动模拟装置向作业机械臂安装端施加振动扰动。现有作业机械臂的开放力矩控制程序、运动捕捉系统与IMU的状态输入接口及同步记录接口，可支持运动控制集成与对照实验；已有模块对接平台、六维力/力矩测量及接触记录，可支撑接口标定和柔顺接触研究。作业机械臂的运动控制程序及接触记录回放流程为运动控制实现与接触对准方法验证提供了基础。
+
+依托单位另建有约$4\,\mathrm m\times10\,\mathrm m$的在轨操作微重力模拟地面实验平台，可为相关地面验证提供配套条件。本项目悬挂装置的实验结果按照地面重力下的基座振动工况进行分析。
+
+\topic{（2）尚需完善的条件及解决途径}
+
+围绕基座振动下的闭环验证，拟完善模拟装置与作业机械臂之间的悬挂连接法兰、转接组件及可换配重，布置基座运动与安装端力和力矩测点，完成位姿测量系统、力和力矩传感器及传感器空间外参的标定，并实现模拟装置与作业机械臂的执行时序同步。结合现有对接平台完善典型接口夹具与独立位姿测量，使基座激励、末端运动和最终对接精度能够分别评价。连接组件、接口改装与专项测试按项目预算落实，计算与通用测量设备优先共享。
+
+拟依托重点实验室在航空航天结构力学及控制方面的研究条件，围绕安装端作用力与力矩校核、运动与受力测量及控制实验开展联合讨论和测试，按阶段研究进度落实设备共享与试验安排。
+
+
+\subsection{申请人简介}
+
+\topic{（1）学历与研究工作简历}
+
+单明贺，北京理工大学教授、博士生导师，国家级青年人才，主要从事空间在轨操作动力学与控制、柔性多体动力学和空间机器人技术研究。2007年9月至2011年7月在哈尔滨工业大学学习，获飞行器制造工程学士学位；2011年9月至2013年7月在哈尔滨工业大学学习，获航空宇航制造工程硕士学位；2013年11月至2018年6月在荷兰代尔夫特理工大学学习，获航天工程博士学位。2018年11月至2020年11月在美国马里兰大学帕克分校从事博士后研究，2021年1月起在北京理工大学工作。
+
+申请人主持国家科技重大专项子课题、国家自然科学基金面上项目和青年项目等科研项目10余项，发表高水平论文30余篇，获授权发明专利7项。相关研究覆盖柔性结构动力学、空间机器人操作与地面验证，为本项目的耦合建模、控制方法研究和实验组织提供支撑。
+
+\Needspace{7\baselineskip}
+\topic{（2）近期与本项目有关的主要论著}
+
+\begin{enumerate}[label=\arabic*.]
+ \item \begin{minipage}[t]{\linewidth}祁伊凡, 单明贺, 田强. 空间多柔体系统缩比等效动力学建模方法研究[J]. 中国科学: 物理学 力学 天文学, 2025, 55(2): 224518. DOI: \doi{10.1360/SSPMA-2024-0302}.
+ \end{minipage}
+ \item \begin{minipage}[t]{\linewidth}史玲玲, 肖晓龙, 张晓峰, 范立佳, 单明贺, 田强. 空间机器人在轨组装多模块单元的对接力控制与地面实验[J]. 力学学报, 2024, 56(3): 800--816. DOI: \doi{10.6052/0459-1879-23-458}.
+ \end{minipage}
+ \item \begin{minipage}[t]{\linewidth}Yifan Qi, Shilei Han, Minghe Shan, Mingwu Li, Qiang Tian. Invariant-manifold-based model reduction for geometrically exact beam dynamics[J]. Computer Methods in Applied Mechanics and Engineering, 2026, 450: 118643. DOI: \doi{10.1016/j.cma.2025.118643}.
+ \end{minipage}
+\end{enumerate}
+
+% 接触研究稿为匿名研究材料，作者名单未提供，已在“工作基础”说明。
+% 不将匿名稿件冒列为申请人已发表论著，正式论著清单按实际发表状态更新。
+\topic{（3）学术奖励}
+
+\begin{enumerate}[label=\arabic*.]
+\item 单明贺，国际空间研究委员会青年科学家最佳论文奖（COSPAR Outstanding Paper Award for Young Scientists），2022年。对应论文为：Minghe Shan, Jian Guo, Eberhard Gill. An analysis of the flexibility modeling of a net for space debris removal[J]. Advances in Space Research, 2020, 65(3): 1083--1094. DOI: \doi{10.1016/j.asr.2019.10.041}。
+\item 张大羽，罗凯，赵将，韩石磊，朱佳龙，单明贺，王辉，刘凡，薛永刚，王立朋. 空间大型柔性可展结构高可靠展开与超低频模态辨识关键技术及应用. 中国振动工程学会科学技术奖二等奖，2023年度。
+\end{enumerate}
+
+\subsection{项目组主要成员简介}
+
+项目组由单明贺、苏文康、黄朕、李融冰和任启明组成，围绕耦合建模、控制方法与地面验证拟作如下分工。
+
+\textbf{单明贺：}项目负责人，研究基础及代表性成果见前节。负责总体研究方案与进度组织，统筹机器人与柔性桁架的耦合建模、闭环性能分析及与重点实验室的合作交流。
+
+\textbf{苏文康：}已开展自由漂浮空间机器人任务优先协同操作与实时优化控制研究。拟承担几何阻抗与动力学优化控制设计、驱动约束协调及基座振动下的末端运动与安装端力和力矩分析。
+
+\textbf{黄朕：}已开展大型空间望远镜多机器人组装序列规划研究，具备面向在轨组装任务组织操作流程的研究基础。拟承担典型作业过程与参考轨迹设计、实验工况组织及结果评价，服务于本项目单机器人运动与对接验证。
+
+\textbf{李融冰：}拟承担作业机械臂的控制程序集成与实物实验，重点开展实时力矩接口实现、基座振动下运动控制验证和实验数据分析。
+
+\Needspace{7\baselineskip}
+\topic{近期与本项目有关的主要论著}
+
+\begingroup
+\small
+\setstretch{1.12}
+\begin{enumerate}[label=\arabic*.]
+\item \begin{minipage}[t]{\linewidth}Wenkang Su, Lingling Shi, Andreas Müller, Minghe Shan. Cooperative manipulation control with task-prioritized real-time optimization for free-floating dual-arm space robots[J]. Aerospace Science and Technology, 2026, 171: 111584. DOI: \doi{10.1016/j.ast.2025.111584}.
+\end{minipage}
+\item \begin{minipage}[t]{\linewidth}Zhen Huang, Lingling Shi, Lijia Fan, Yan Yang, Minghe Shan. Multirobot Assembly Sequence Planning of a Large Space Telescope[J]. Journal of Spacecraft and Rockets, 2025, 62(3): 915--927. DOI: \doi{10.2514/1.A36129}.
+\end{minipage}
+\item \begin{minipage}[t]{\linewidth}Qiming Ren, Minghe Shan. A unified framework for compliant control and trajectory planning in robotic in-orbit assembly[J]. Acta Astronautica, 2026, 243: 32--45. DOI: \doi{10.1016/j.actaastro.2026.01.029}.
+\end{minipage}
+\end{enumerate}
+\endgroup
+
+
+\subsection{近五年承担科研项目情况}
+
+本项目依托既有研究基础，重点研究柔性安装界面的动态作用、受约束阻抗响应及接触参考修正，形成相应模型、算法和典型接口实验结果。
+
+\needinfo{近五年科研项目的正式名称、编号、经费来源、起止年月及承担角色，并按实际任务书说明与本项目的联系和任务区别。}
+
+\clearpage
+\section{经费预算}
+
+% 重点课题20--30万元，本稿按30万元编制；数量和单价为需求测算，非供应商报价。
+申请经费30.00万元，围绕模拟装置与作业机械臂的悬挂连接、接口改装、同步测量与控制接口、专项测试及成果产出安排。依托现有地面实验平台及计算设备开展研究，优先共享可用仪器设备。经费预算如下。
+
+\begingroup
+\small
+\begin{longtable}{P{3.15cm}>{\centering\arraybackslash}p{1.35cm}P{9.6cm}}
+\toprule
+预算科目 & 金额（万元） & 计算根据及理由 \\
+\midrule
+\endfirsthead
+\toprule
+预算科目 & 金额（万元） & 计算根据及理由 \\
+\midrule
+\endhead
+\midrule
+\multicolumn{3}{r}{续下页}\\
+\endfoot
+\bottomrule
+\endlastfoot
+\textbf{合计} & \textbf{30.00} & 服务于耦合动力学与运动控制、接触组装和地面试验验证三项研究内容。 \\
+设备费 & 4.00 & 同步采集和实时控制接口改装所需设备及配件1套，按4.00万元测算，用于模拟装置与作业机械臂的状态、基座与末端运动及力和力矩测量数据的时序同步。 \\
+材料费 & 6.00 & 悬挂连接法兰、转接组件及配套材料按3.60万元测算；典型接口夹具及可换配重材料1.40万元；传感安装、线缆等耗材1.00万元。 \\
+测试化验加工费 & 9.00 & 悬挂连接及接口夹具加工装配3批，每批1.50万元，共4.50万元；基座与末端位姿测量、安装端力和力矩传感器标定3批，每批0.80万元，共2.40万元；外协动态测量与联合测试3批，每批0.70万元，共2.10万元。共享仪器免费使用部分不重复计费。 \\
+差旅费 & 3.00 & 合作试验、专题交流及参加国内学术会议等约10人次，按每人次0.30万元测算。 \\
+会议费 & 0.50 & 项目专题研讨及实验方案评议2次，按每次0.25万元测算。 \\
+国际合作与交流费 & 0.00 & 以线上学术交流为主，不安排出国经费。 \\
+出版/文献/信息传播/知识产权事务费 & 3.50 & 论文出版相关费用2篇，每篇按1.00万元测算，共2.00万元；发明专利申请及相关事务1.00万元；文献和信息资料0.50万元。 \\
+专家咨询费 & 1.00 & 动力学建模及实验方案咨询约5人次，按每人次0.20万元测算；占总经费3.33\%。 \\
+劳务费 & 3.00 & 参与建模、控制设计和实验工作的研究生2人，每人累计15个月，每人每月0.10万元；占总经费10.00\%。 \\
+\end{longtable}
+\endgroup
+
+预算按研究需求测算，设备与测试项目结合现有条件核定，相关支出按实际发生及适用标准执行。专家咨询费和劳务费分别满足申请书模板规定的不超过总经费5\%和10\%的比例要求。
+
+% ==================== 报告正文结束 ====================
+\end{document}

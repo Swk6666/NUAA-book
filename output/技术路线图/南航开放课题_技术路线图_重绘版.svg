@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1410" viewBox="0 0 1800 1410"><title>柔性桁架支撑下空间机器人技术路线图</title><desc>耦合动力学与运动控制、接触引导与柔顺组装两个研究模块互相协调，通过地面实验与集成验证进行模型校核与方法改进。</desc><defs><marker id="arrow365C7E" viewBox="0 0 12 12" markerWidth="11" markerHeight="11" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L12 6L0 12L3 6Z" fill="#365C7E"/></marker><marker id="arrow397570" viewBox="0 0 12 12" markerWidth="11" markerHeight="11" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L12 6L0 12L3 6Z" fill="#397570"/></marker><marker id="arrow966F38" viewBox="0 0 12 12" markerWidth="11" markerHeight="11" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L12 6L0 12L3 6Z" fill="#966F38"/></marker><marker id="arrow566C7B" viewBox="0 0 12 12" markerWidth="11" markerHeight="11" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L12 6L0 12L3 6Z" fill="#566C7B"/></marker><marker id="arrowA77633" viewBox="0 0 12 12" markerWidth="11" markerHeight="11" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L12 6L0 12L3 6Z" fill="#A77633"/></marker></defs><rect x="0" y="0" width="1800" height="1410" rx="0" fill="#FFFFFF" stroke="none" stroke-width="0"/>
+<rect x="132" y="30" width="1536" height="147" rx="8" fill="#ECF1F6" stroke="#365C7E" stroke-width="2"/>
+<text x="900" y="89" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="43" font-weight="700" fill="#223342" text-anchor="middle" >柔性桁架支撑下空间机器人的精确运动与柔顺组装</text>
+<text x="406" y="143" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="31" font-weight="400" fill="#546371" text-anchor="middle" >基座振动与负载变化</text>
+<text x="900" y="143" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="31" font-weight="400" fill="#546371" text-anchor="middle" >关节驱动约束</text>
+<text x="1394" y="143" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="31" font-weight="400" fill="#546371" text-anchor="middle" >目标位姿不确定</text>
+<path d="M654 118L654 151" fill="none" stroke="#C2CCD6" stroke-width="1.6" />
+<path d="M1146 118L1146 151" fill="none" stroke="#C2CCD6" stroke-width="1.6" />
+<path d="M460 177 L460 240" stroke="#365C7E" stroke-width="3" fill="none" stroke-linejoin="round"  marker-end="url(#arrow365C7E)"/>
+<path d="M1340 177 L1340 240" stroke="#397570" stroke-width="3" fill="none" stroke-linejoin="round"  marker-end="url(#arrow397570)"/>
+<rect x="132" y="244" width="656" height="747" rx="9" fill="#F0F5F9" stroke="#365C7E" stroke-width="2"/>
+<rect x="132" y="244" width="656" height="105" rx="8" fill="#365C7E" stroke="#365C7E" stroke-width="1"/>
+<rect x="132" y="316" width="656" height="33" rx="0" fill="#365C7E" stroke="none" stroke-width="0"/>
+<text x="460" y="284" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="29" font-weight="500" fill="#FFFFFF" text-anchor="middle" >研究内容一</text>
+<text x="460" y="328" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="37" font-weight="700" fill="#FFFFFF" text-anchor="middle" >耦合动力学与运动控制</text>
+<rect x="1012" y="244" width="656" height="747" rx="9" fill="#F0F7F5" stroke="#397570" stroke-width="2"/>
+<rect x="1012" y="244" width="656" height="105" rx="8" fill="#397570" stroke="#397570" stroke-width="1"/>
+<rect x="1012" y="316" width="656" height="33" rx="0" fill="#397570" stroke="none" stroke-width="0"/>
+<text x="1340" y="284" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="29" font-weight="500" fill="#FFFFFF" text-anchor="middle" >研究内容二</text>
+<text x="1340" y="328" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="37" font-weight="700" fill="#FFFFFF" text-anchor="middle" >接触引导与柔顺组装</text>
+<rect x="160" y="366" width="600" height="162" rx="5" fill="#FFFFFF" stroke="#B6C9D9" stroke-width="1.8"/>
+<rect x="160" y="366" width="6" height="162" rx="0" fill="#365C7E" stroke="none" stroke-width="0"/>
+<text x="460" y="412" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="35" font-weight="700" fill="#365C7E" text-anchor="middle" >安装界面耦合表征</text>
+<text x="460" y="461" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="31" font-weight="400" fill="#223342" text-anchor="middle" >作业端浮动基的倒置动力学</text>
+<text x="460" y="503" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="31" font-weight="400" fill="#223342" text-anchor="middle" >界面运动与载荷的耦合传递</text>
+<rect x="160" y="568" width="600" height="162" rx="5" fill="#FFFFFF" stroke="#B6C9D9" stroke-width="1.8"/>
+<rect x="160" y="568" width="6" height="162" rx="0" fill="#365C7E" stroke="none" stroke-width="0"/>
+<text x="460" y="614" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="35" font-weight="700" fill="#365C7E" text-anchor="middle" >SE(3) 几何阻抗设计</text>
+<text x="460" y="663" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="31" font-weight="400" fill="#223342" text-anchor="middle" >位姿误差动态与坐标映射</text>
+<text x="460" y="705" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="31" font-weight="400" fill="#223342" text-anchor="middle" >生成作业端参考加速度</text>
+<rect x="160" y="770" width="600" height="162" rx="5" fill="#FFFFFF" stroke="#B6C9D9" stroke-width="1.8"/>
+<rect x="160" y="770" width="6" height="162" rx="0" fill="#365C7E" stroke="none" stroke-width="0"/>
+<text x="460" y="816" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="35" font-weight="700" fill="#365C7E" text-anchor="middle" >受约束动力学优化</text>
+<text x="460" y="865" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="31" font-weight="400" fill="#223342" text-anchor="middle" >关节运动、力矩及变化量约束</text>
+<text x="460" y="907" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="31" font-weight="400" fill="#223342" text-anchor="middle" >阻抗可实现性与局部误差界</text>
+<rect x="1040" y="366" width="600" height="162" rx="5" fill="#FFFFFF" stroke="#B4D0CB" stroke-width="1.8"/>
+<rect x="1040" y="366" width="6" height="162" rx="0" fill="#397570" stroke="none" stroke-width="0"/>
+<text x="1340" y="412" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="35" font-weight="700" fill="#397570" text-anchor="middle" >接触流形表征与目标配准</text>
+<text x="1340" y="461" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="31" font-weight="400" fill="#223342" text-anchor="middle" >物理方向辅助接触场配准 PCF</text>
+<text x="1340" y="503" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="31" font-weight="400" fill="#223342" text-anchor="middle" >基座运动补偿与局部可辨识性</text>
+<rect x="1040" y="568" width="600" height="162" rx="5" fill="#FFFFFF" stroke="#B4D0CB" stroke-width="1.8"/>
+<rect x="1040" y="568" width="6" height="162" rx="0" fill="#397570" stroke="none" stroke-width="0"/>
+<text x="1340" y="614" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="35" font-weight="700" fill="#397570" text-anchor="middle" >有界参考修正</text>
+<text x="1340" y="663" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="31" font-weight="400" fill="#223342" text-anchor="middle" >约束导纳捕获 RAC</text>
+<text x="1340" y="705" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="31" font-weight="400" fill="#223342" text-anchor="middle" >修正速率与累计偏移约束</text>
+<rect x="1040" y="770" width="600" height="162" rx="5" fill="#FFFFFF" stroke="#B4D0CB" stroke-width="1.8"/>
+<rect x="1040" y="770" width="6" height="162" rx="0" fill="#397570" stroke="none" stroke-width="0"/>
+<text x="1340" y="816" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="35" font-weight="700" fill="#397570" text-anchor="middle" >接触估计与运动执行协调</text>
+<text x="1340" y="865" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="31" font-weight="400" fill="#223342" text-anchor="middle" >估计、参考与跟踪误差传递</text>
+<text x="1340" y="907" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="31" font-weight="400" fill="#223342" text-anchor="middle" >参考修正与驱动能力匹配</text>
+<path d="M460 528 L460 563" stroke="#365C7E" stroke-width="3" fill="none" stroke-linejoin="round"  marker-end="url(#arrow365C7E)"/>
+<path d="M460 730 L460 765" stroke="#365C7E" stroke-width="3" fill="none" stroke-linejoin="round"  marker-end="url(#arrow365C7E)"/>
+<path d="M1340 528 L1340 563" stroke="#397570" stroke-width="3" fill="none" stroke-linejoin="round"  marker-end="url(#arrow397570)"/>
+<path d="M1340 730 L1340 765" stroke="#397570" stroke-width="3" fill="none" stroke-linejoin="round"  marker-end="url(#arrow397570)"/>
+<text x="460" y="971" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="31" font-weight="600" fill="#365C7E" text-anchor="middle" >受约束运动控制方法</text>
+<text x="1340" y="971" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="31" font-weight="600" fill="#397570" text-anchor="middle" >接触引导与执行协调方法</text>
+<text x="900" y="605" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="30" font-weight="600" fill="#A77633" text-anchor="middle" >位姿及导数</text>
+<text x="900" y="646" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="30" font-weight="600" fill="#A77633" text-anchor="middle" >参考</text>
+<path d="M1036 675 L792 675" stroke="#A77633" stroke-width="4" fill="none" stroke-linejoin="round"  marker-end="url(#arrowA77633)"/>
+<text x="900" y="810" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="30" font-weight="600" fill="#A77633" text-anchor="middle" >实际运动与</text>
+<text x="900" y="851" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="30" font-weight="600" fill="#A77633" text-anchor="middle" >约束反馈</text>
+<path d="M764 880 L1035 880" stroke="#A77633" stroke-width="4" fill="none" stroke-linejoin="round"  marker-end="url(#arrowA77633)"/>
+<path d="M460 991 L460 1046" stroke="#365C7E" stroke-width="3" fill="none" stroke-linejoin="round"  marker-end="url(#arrow365C7E)"/>
+<path d="M1340 991 L1340 1046" stroke="#397570" stroke-width="3" fill="none" stroke-linejoin="round"  marker-end="url(#arrow397570)"/>
+<rect x="132" y="1050" width="1536" height="318" rx="8" fill="#FAF7F0" stroke="#966F38" stroke-width="2"/>
+<rect x="132" y="1050" width="1536" height="72" rx="8" fill="#966F38" stroke="#966F38" stroke-width="1"/>
+<rect x="132" y="1097" width="1536" height="25" rx="0" fill="#966F38" stroke="none" stroke-width="0"/>
+<text x="900" y="1099" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="37" font-weight="700" fill="#FFFFFF" text-anchor="middle" >研究内容三　地面实验与集成验证</text>
+<text x="900" y="1170" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="33" font-weight="500" fill="#223342" text-anchor="middle" >基座运动复现　·　多源同步观测　·　独立精度评价</text>
+<rect x="160" y="1196" width="440" height="122" rx="5" fill="#FFFFFF" stroke="#D6C7AC" stroke-width="1.8"/>
+<text x="380" y="1234" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="32" font-weight="700" fill="#966F38" text-anchor="middle" >模型与运动控制验证</text>
+<text x="380" y="1273" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="30" font-weight="400" fill="#223342" text-anchor="middle" >位姿保持 · 轨迹跟踪</text>
+<text x="380" y="1308" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="30" font-weight="400" fill="#223342" text-anchor="middle" >误差响应 · 实时性</text>
+<rect x="680" y="1196" width="440" height="122" rx="5" fill="#FFFFFF" stroke="#D6C7AC" stroke-width="1.8"/>
+<text x="900" y="1234" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="32" font-weight="700" fill="#966F38" text-anchor="middle" >接触组装分项对照</text>
+<text x="900" y="1273" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="30" font-weight="400" fill="#223342" text-anchor="middle" >仅配准 · 仅参考修正</text>
+<text x="900" y="1308" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="30" font-weight="400" fill="#223342" text-anchor="middle" >联合方法及基准对照</text>
+<rect x="1200" y="1196" width="440" height="122" rx="5" fill="#FFFFFF" stroke="#D6C7AC" stroke-width="1.8"/>
+<text x="1420" y="1234" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="32" font-weight="700" fill="#966F38" text-anchor="middle" >典型接口集成验证</text>
+<text x="1420" y="1273" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="30" font-weight="400" fill="#223342" text-anchor="middle" >接近—对准—插接—保持</text>
+<text x="1420" y="1308" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="30" font-weight="400" fill="#223342" text-anchor="middle" >到位精度 · 组装成功率</text>
+<path d="M607 1257 L672 1257" stroke="#966F38" stroke-width="3" fill="none" stroke-linejoin="round"  marker-end="url(#arrow966F38)"/>
+<path d="M1127 1257 L1192 1257" stroke="#966F38" stroke-width="3" fill="none" stroke-linejoin="round"  marker-end="url(#arrow966F38)"/>
+<text x="900" y="1350" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="30" font-weight="400" fill="#546371" text-anchor="middle" >静止基座与不同激励对照，检验方法的有效性与适用范围</text>
+<path d="M132 1190 L74 1190 L74 446 L126 446" stroke="#566C7B" stroke-width="2.7" fill="none" stroke-linejoin="round" stroke-dasharray="10 7" marker-end="url(#arrow566C7B)"/>
+<path d="M1668 1190 L1726 1190 L1726 446 L1674 446" stroke="#566C7B" stroke-width="2.7" fill="none" stroke-linejoin="round" stroke-dasharray="10 7" marker-end="url(#arrow566C7B)"/>
+<text x="42" y="833" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="29" font-weight="500" fill="#546371" text-anchor="middle" transform="rotate(-90 42 833)">实验数据校核模型与参数</text>
+<text x="1760" y="833" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="29" font-weight="500" fill="#546371" text-anchor="middle" transform="rotate(90 1760 833)">实验评价修正方法与边界</text></svg>

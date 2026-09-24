@@ -225,37 +225,31 @@
 \end{figure}
 \FloatBarrier
 
-\subsubsection{反向动力学建模与运动控制}
+\subsubsection{倒置动力学建模与运动控制}
 
-以作业端为浮动基、实际安装端为虚拟末端，沿作业端向安装端重新组织运动链，建立反向动力学模型，模型基本形式为：
-
-{\color{black}\begin{equation}
- \bm M\dot{\bm\nu}+\bm h
- =\bm S^{\mathsf T}\bm\tau_j
- +\bm J_b^{\mathsf T}\bm F_b
- +\bm J_g^{\mathsf T}\bm F_e .
- \label{eq:reverse_dynamics}
-\end{equation}}
-
-其中，$\bm\nu$由作业端体速度和关节速度组成，$\bm M$与$\bm h$分别为惯性矩阵和包含科氏力与重力作用的偏置项；$\bm S$为关节选择矩阵，$\bm\tau_j$为关节驱动力矩；$\bm F_b$、$\bm F_e$及其雅可比矩阵$\bm J_b$、$\bm J_g$分别对应实际作业端和安装端。自由运动时$\bm F_b=0$，接触时由力传感测量计入。
-
-以现有安装端静力平衡近似为基线，结合实测基座运动与界面载荷，研究动态偏差随激励和负载的变化规律，形成控制所需的载荷描述与误差范围。地面实验中，模拟机械臂末端与作业机械臂基座固定连接，对应模型的实际安装端；通过指令、实测运动与受力对照，校核地面激励和控制模型的对应关系。
-
-\begingroup\tolerance=9999\emergencystretch=8em
-在$\SE$上统一描述实际位姿$T_b$与期望位姿$T_d$，采用局部误差坐标\allowbreak$\color{black}\bm\lambda=\operatorname{Log}(T_b^{-1}T_d)^\vee$，将几何阻抗映射为如下的阻抗控制方程\cite{kim2025}：
-\par\endgroup
-
+以作业端为六自由度浮动基、实际安装端为虚拟末端，沿作业端至安装端重新组织运动链，建立倒置动力学模型：
 \begin{equation}
- \bm A_\lambda\ddot{\bm\lambda}
- +\bm D_\lambda\dot{\bm\lambda}
- +\bm K_\lambda\bm\lambda
- =\bm\gamma .
- \label{eq:impedance}
+  \bm M\dot{\bm\nu}+\bm h
+  =\bm S^{\mathsf T}\bm\tau_j
+  +\bm J_b^{\mathsf T}\bm F_b
+  +\bm J_g^{\mathsf T}\bm F_e .
+  \label{eq:reverse_dynamics}
 \end{equation}
+其中，$\bm\nu$由作业端体速度和关节速度组成，$\bm M$为惯性矩阵，$\bm h$包含科氏、离心及重力项；$\bm S$为关节选择矩阵，$\bm\tau_j$为关节驱动力矩；$\bm F_b$、$\bm F_e$分别为作用于作业端和安装端的界面力与力矩，$\bm J_b$、$\bm J_g$为对应雅可比矩阵。当前自由空间位姿保持实验取$\bm F_b=0$。
 
-其中，$\bm A_\lambda$、$\bm D_\lambda$、$\bm K_\lambda$为经几何映射得到的等效惯量、阻尼和刚度矩阵，$\bm\gamma$为与误差坐标及相对运动方向一致的广义接触输入。通过求解该阻抗控制方程可获得期望加速度$\ddot{\bm\lambda}_d$，并将其映射为作业端的期望加速度$\dot{\bm\nu}_d$，作为反向动力学的输入。
+安装端载荷采用随构型更新的静态支撑近似：根据当前构型下的重力项和安装端雅可比，求解满足浮动基六维静力平衡的支撑载荷，并将其映射为广义力，作为动力学约束中的载荷基线。地面实验中，将模拟机械臂末端与作业机械臂安装端刚性连接，由模拟机械臂施加基座运动；作业机械臂以初始作业端世界位姿为固定目标，期望速度和加速度均设为零，通过位置与姿态误差评价基座运动下的位姿保持效果。
 
-将参考加速度嵌入动力学二次规划（QP），以参考跟踪、关节虚拟阻尼和力矩正则为目标，以反向动力学为等式约束，统一计入关节运动范围、力矩及其变化率限制。
+为将作业端位姿偏差转化为加速度参考，在$\mathrm{SE}(3)$上描述实际位姿$T_b$与期望位姿$T_d$，定义局部误差坐标$\bm\lambda=\operatorname{Log}(T_b^{-1}T_d)^\vee$，并在误差坐标中构造阻抗关系\cite{kim2025}：
+\begin{equation}
+  \bm A_\lambda\ddot{\bm\lambda}_{\mathrm{ref}}
+  +\bm D_\lambda\dot{\bm\lambda}
+  +\bm K_\lambda\bm\lambda
+  =\bm\gamma .
+  \label{eq:impedance}
+\end{equation}
+其中，$\bm A_\lambda$、$\bm D_\lambda$和$\bm K_\lambda$分别为误差坐标中的虚拟惯量、阻尼和刚度矩阵，$\bm\gamma$为按误差方向约定的外力输入，当前实验取零。由该关系计算$\ddot{\bm\lambda}_{\mathrm{ref}}$，再通过指数映射的微分及其时间导数转换为作业端六维参考加速度，并统一到动力学求解所用坐标。
+
+将作业端参考加速度作为动力学二次规划（QP）的软跟踪目标，结合关节速度阻尼对应的加速度参考和力矩正则项，联合优化作业端加速度、关节加速度与驱动力矩。以倒置动力学为等式约束，施加关节加速度、力矩幅值及单周期力矩变化量限制，并加入关节位置约束，求得满足上述约束的关节力矩。
 
 \subsubsection{基于接触流形表征与参考修正的柔顺组装}
 
